@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 470" role="img" aria-labelledby="arch-title">
+  <title id="arch-title">daidokoroの構成図。ブラウザ内のUI層がロジック層の3モジュールを呼び、レシピ台帳はlocalStorageに保存される。</title>
+  <style>
+    .box { fill: #fffdf8; stroke: #e6decf; stroke-width: 1.5; }
+    .layer { fill: #f7f3ec; stroke: #e6decf; stroke-width: 1.5; }
+    .chip { fill: #f6e3d5; stroke: none; }
+    .name { fill: #29241e; font: 600 15px system-ui, sans-serif; }
+    .label { fill: #6e6557; font: 13px system-ui, sans-serif; }
+    .chip-text { fill: #b9551c; font: 600 13px system-ui, sans-serif; }
+    .layer-name { fill: #b9551c; font: 700 13px system-ui, sans-serif; letter-spacing: 0.08em; }
+    .edge { stroke: #6e6557; stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+    .edge-label { fill: #6e6557; font: 12px system-ui, sans-serif; }
+    #arrow path { fill: #6e6557; }
+    @media (prefers-color-scheme: dark) {
+      .box { fill: #231f1a; stroke: #38322a; }
+      .layer { fill: #1a1714; stroke: #38322a; }
+      .chip { fill: #3a2a1d; }
+      .name { fill: #ece5da; }
+      .label { fill: #a59a89; }
+      .chip-text { fill: #e58a4e; }
+      .layer-name { fill: #e58a4e; }
+      .edge { stroke: #a59a89; }
+      .edge-label { fill: #a59a89; }
+      #arrow path { fill: #a59a89; }
+    }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 z"/>
+    </marker>
+  </defs>
+
+  <rect class="layer" x="40" y="32" width="800" height="128" rx="14"/>
+  <text class="layer-name" x="64" y="60">UI層(app.ts / main.ts)</text>
+  <text class="label" x="64" y="82">ハッシュルーティング(route.ts)で4つの画面を切り替え、状態が変わるたびに描き直す</text>
+  <rect class="chip" x="64" y="100" width="92" height="32" rx="16"/>
+  <text class="chip-text" x="110" y="121" text-anchor="middle">一覧</text>
+  <rect class="chip" x="168" y="100" width="92" height="32" rx="16"/>
+  <text class="chip-text" x="214" y="121" text-anchor="middle">詳細</text>
+  <rect class="chip" x="272" y="100" width="92" height="32" rx="16"/>
+  <text class="chip-text" x="318" y="121" text-anchor="middle">作成・編集</text>
+  <rect class="chip" x="376" y="100" width="120" height="32" rx="16"/>
+  <text class="chip-text" x="436" y="121" text-anchor="middle">買い物リスト</text>
+
+  <path class="edge" d="M170 160 V224"/>
+  <path class="edge" d="M440 160 V224"/>
+  <path class="edge" d="M710 160 V224"/>
+
+  <rect class="box" x="60" y="228" width="220" height="96" rx="14"/>
+  <text class="name" x="170" y="262" text-anchor="middle">quantity.ts</text>
+  <text class="label" x="170" y="286" text-anchor="middle">「大さじ1と1/2」「200g」を</text>
+  <text class="label" x="170" y="306" text-anchor="middle">解析して人数換算する</text>
+
+  <rect class="box" x="330" y="228" width="220" height="96" rx="14"/>
+  <text class="name" x="440" y="262" text-anchor="middle">recipes.ts</text>
+  <text class="label" x="440" y="286" text-anchor="middle">レシピ台帳の型・検証・</text>
+  <text class="label" x="440" y="306" text-anchor="middle">取り込み・永続化</text>
+
+  <rect class="box" x="600" y="228" width="220" height="96" rx="14"/>
+  <text class="name" x="710" y="262" text-anchor="middle">shopping.ts</text>
+  <text class="label" x="710" y="286" text-anchor="middle">複数レシピの材料を名寄せして</text>
+  <text class="label" x="710" y="306" text-anchor="middle">合算、Markdown出力</text>
+
+  <path class="edge" d="M330 276 H288"/>
+  <path class="edge" d="M600 276 H558"/>
+
+  <path class="edge" d="M440 324 V388"/>
+  <text class="edge-label" x="452" y="362">保存・復元</text>
+
+  <rect class="box" x="330" y="392" width="220" height="48" rx="14"/>
+  <text class="name" x="440" y="421" text-anchor="middle">localStorage</text>
+</svg>
