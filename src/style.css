@@ -1,31 +1,53 @@
-/* 配色は紙のような低彩度ベースに柿色の一点アクセント。
-   ライト・ダークはOS設定(prefers-color-scheme)に追従する。 */
+/*
+  daidokoro — 台所の手控え。紙のような地に柿色を一点だけ差す、編集的な台所帳。
+  箱と影を積まず、罫線・余白・明朝の見出しで構成する。装飾は最小、主役は文字と数字。
+*/
 
 :root {
   color-scheme: light dark;
-  --bg: #f7f3ec;
-  --surface: #fffdf8;
-  --ink: #29241e;
-  --muted: #6e6557;
-  --line: #e6decf;
-  --accent: #b9551c;
-  --accent-soft: #f6e3d5;
+
+  /* 紙と墨。温度のある中立色。 */
+  --bg: #f6f2e9;
+  --surface: #fdfbf5;
+  --ink: #2a2520;
+  --muted: #6b6253;
+  --faint: #847b6c;
+  --line: #e7e0d1;
+  --line-strong: #d8cfbb;
+
+  /* 柿色 — 唯一のアクセント */
+  --accent: #b9551c; /* 印・罫・塗り */
+  --accent-ink: #a04713; /* 地に乗せる文字用(AA確保) */
+  --accent-soft: #f4e5d8; /* 淡い差し色 */
+  --accent-btn: #b9551c; /* 白文字を乗せる塗りボタン(両テーマでAA) */
   --danger: #a93226;
-  --shadow: 0 8px 24px rgb(41 36 30 / 0.07);
-  --radius: 14px;
+  --danger-ink: #a93226;
+
+  --serif: 'Hiragino Mincho ProN', 'Yu Mincho', 'Noto Serif JP', serif;
+  --sans: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', system-ui, sans-serif;
+  --mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+
+  --shell: 46rem;
+  --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --radius: 9px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #1a1714;
-    --surface: #231f1a;
+    --surface: #221e19;
     --ink: #ece5da;
-    --muted: #a59a89;
-    --line: #38322a;
+    --muted: #a89d8c;
+    --faint: #8a8070;
+    --line: #322c24;
+    --line-strong: #423a2f;
+
     --accent: #e58a4e;
-    --accent-soft: #3a2a1d;
+    --accent-ink: #ef9a64;
+    --accent-soft: #38281b;
+    --accent-btn: #b9551c;
     --danger: #e0735f;
-    --shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+    --danger-ink: #e88974;
   }
 }
 
@@ -42,36 +64,39 @@ body {
   min-height: 100%;
   background: var(--bg);
   color: var(--ink);
-  font-family: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', system-ui, sans-serif;
+  font-family: var(--sans);
   font-size: 16px;
-  line-height: 1.7;
+  line-height: 1.75;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 h1,
-h2 {
+h2,
+h3 {
+  font-family: var(--serif);
+  font-weight: 600;
   line-height: 1.3;
-  letter-spacing: 0.01em;
+  letter-spacing: 0.02em;
+  margin: 0;
 }
 
 h1 {
-  font-size: 1.6rem;
-  margin: 0 0 8px;
+  font-size: clamp(1.5rem, 3vw, 1.85rem);
 }
 
 h2 {
-  font-size: 1.1rem;
-  margin: 0 0 16px;
+  font-size: 1.18rem;
 }
 
 a {
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 svg {
@@ -80,21 +105,39 @@ svg {
   flex: none;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* 小見出し(キッカー) */
+.kicker {
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
 /* ---- 骨格 ---- */
 
 .site-header {
   position: sticky;
   top: 0;
   z-index: 10;
-  background: color-mix(in srgb, var(--bg) 85%, transparent);
-  backdrop-filter: blur(10px);
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  backdrop-filter: saturate(1.1) blur(10px);
   border-bottom: 1px solid var(--line);
 }
 
 .site-header-inner {
-  max-width: 44rem;
+  max-width: var(--shell);
   margin: 0 auto;
-  padding: 12px 24px;
+  padding: 14px 24px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -104,11 +147,13 @@ svg {
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   color: var(--ink);
   text-decoration: none;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
 }
 
 .brand svg {
@@ -119,78 +164,96 @@ svg {
 
 .site-header nav {
   display: flex;
-  gap: 4px;
+  gap: 22px;
 }
 
 .site-header nav a {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 12px;
-  border-radius: 999px;
+  gap: 7px;
+  padding: 3px 0;
   color: var(--muted);
   text-decoration: none;
   font-size: 0.95rem;
-  transition:
-    color 0.15s ease,
-    background-color 0.15s ease;
+  transition: color 0.18s var(--ease);
+}
+
+.site-header nav a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 1px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.24s var(--ease);
 }
 
 .site-header nav a:hover {
   color: var(--ink);
-  background: var(--accent-soft);
+}
+
+.site-header nav a:hover::after,
+.site-header nav a[aria-current='page']::after {
+  transform: scaleX(1);
 }
 
 .site-header nav a[aria-current='page'] {
-  color: var(--accent);
+  color: var(--accent-ink);
   font-weight: 600;
 }
 
 .cart-count {
-  min-width: 20px;
-  height: 20px;
+  min-width: 19px;
+  height: 19px;
   padding: 0 6px;
   border-radius: 999px;
   background: var(--accent);
-  color: var(--surface);
-  font-size: 0.75rem;
+  color: #fff;
+  font-size: 0.72rem;
   font-weight: 700;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .site-main {
-  max-width: 44rem;
+  max-width: var(--shell);
   margin: 0 auto;
-  padding: 32px 24px 64px;
+  padding: 40px 24px 72px;
 }
 
 .site-footer {
   border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 0.85rem;
+  color: var(--faint);
+  font-size: 0.82rem;
 }
 
 .site-footer p {
-  max-width: 44rem;
+  max-width: var(--shell);
   margin: 0 auto;
-  padding: 16px 24px;
+  padding: 20px 24px;
 }
 
 /* ---- 入場モーション ---- */
 
-.view {
-  animation: view-in 0.4s cubic-bezier(0.2, 0.7, 0.3, 1) both;
-}
+@media (prefers-reduced-motion: no-preference) {
+  .view {
+    animation: view-in 0.4s var(--ease) both;
+  }
 
-.cards li,
-.picks li,
-.ingredients tr,
-.shopping tr,
-.steps li {
-  animation: rise 0.35s cubic-bezier(0.2, 0.7, 0.3, 1) both;
-  animation-delay: calc(var(--i, 0) * 30ms);
+  .cards li,
+  .picks li,
+  .ingredients tr,
+  .shopping tr,
+  .steps li {
+    animation: rise 0.4s var(--ease) both;
+    animation-delay: calc(var(--i, 0) * 28ms);
+  }
 }
 
 @keyframes view-in {
@@ -215,54 +278,46 @@ svg {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation: none !important;
-    transition: none !important;
-  }
-}
-
 /* ---- ボタン・フォーム部品 ---- */
 
 .button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  border-radius: 10px;
-  border: 1px solid var(--line);
-  background: var(--surface);
+  padding: 9px 17px;
+  border-radius: var(--radius);
+  border: 1px solid var(--line-strong);
+  background: transparent;
   color: var(--ink);
   font: inherit;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   text-decoration: none;
   cursor: pointer;
   transition:
-    border-color 0.15s ease,
-    background-color 0.15s ease,
-    transform 0.15s ease;
+    border-color 0.18s var(--ease),
+    color 0.18s var(--ease),
+    transform 0.12s var(--ease),
+    filter 0.18s var(--ease);
 }
 
 .button:hover:not(:disabled) {
-  border-color: var(--accent);
-  transform: translateY(-1px);
+  border-color: var(--faint);
 }
 
 .button:active:not(:disabled) {
-  transform: none;
+  transform: translateY(1px);
 }
 
 .button:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: default;
 }
 
 .button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--accent-btn);
+  border-color: var(--accent-btn);
   color: #fff;
+  font-weight: 600;
 }
 
 .button.primary:hover:not(:disabled) {
@@ -270,7 +325,7 @@ svg {
 }
 
 .button.danger {
-  color: var(--danger);
+  color: var(--danger-ink);
 }
 
 .button.danger:hover:not(:disabled) {
@@ -287,9 +342,9 @@ svg {
 
 .toolbar {
   display: flex;
-  gap: 12px;
+  gap: 14px;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
 }
 
@@ -298,13 +353,13 @@ svg {
   min-width: 220px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--muted);
-  transition: border-color 0.15s ease;
+  gap: 9px;
+  padding: 7px 4px;
+  border: 0;
+  border-bottom: 1px solid var(--line-strong);
+  background: none;
+  color: var(--faint);
+  transition: border-color 0.18s var(--ease);
 }
 
 .search:focus-within {
@@ -320,60 +375,64 @@ svg {
   outline: none;
 }
 
+/* レシピは箱に詰めず、罫線と余白で区切る編集的な一覧にする。 */
 .cards {
   list-style: none;
-  margin: 0;
+  margin: 24px 0 0;
   padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
 }
 
 .cards a {
   display: block;
-  height: 100%;
-  padding: 20px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--surface);
+  padding: 24px 0;
+  border-top: 1px solid var(--line);
   color: inherit;
   text-decoration: none;
-  transition:
-    border-color 0.15s ease,
-    transform 0.2s cubic-bezier(0.2, 0.7, 0.3, 1),
-    box-shadow 0.2s ease;
 }
 
-.cards a:hover {
-  border-color: var(--accent);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow);
+.cards li:first-child a {
+  border-top: 0;
+  padding-top: 6px;
 }
 
 .cards h2 {
-  margin: 0 0 4px;
-  font-size: 1.05rem;
+  margin: 0 0 5px;
+  font-size: 1.28rem;
+}
+
+.cards h2 span {
+  background-image: linear-gradient(var(--accent), var(--accent));
+  background-size: 0% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+  transition: background-size 0.3s var(--ease);
+}
+
+.cards a:hover h2 span {
+  background-size: 100% 1px;
 }
 
 .card-meta {
   margin: 0 0 8px;
-  font-size: 0.85rem;
-  color: var(--accent);
+  font-size: 0.8rem;
+  letter-spacing: 0.04em;
+  color: var(--accent-ink);
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 .card-preview {
   margin: 0;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
   color: var(--muted);
 }
 
 .empty {
-  padding: 48px 24px;
+  padding: 56px 24px;
   text-align: center;
-  color: var(--muted);
-  border: 1px dashed var(--line);
-  border-radius: var(--radius);
+  color: var(--faint);
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
 }
 
 /* ---- 詳細 ---- */
@@ -382,14 +441,15 @@ svg {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   color: var(--muted);
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
+  transition: color 0.18s var(--ease);
 }
 
 .back:hover {
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .detail-head {
@@ -406,48 +466,53 @@ svg {
 }
 
 .meta {
-  margin: 0 0 24px;
-  color: var(--muted);
-  font-size: 0.85rem;
+  margin: 8px 0 40px;
+  color: var(--faint);
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
 }
 
+/* パネルは囲み箱でなく、見出しの罫で仕切るセクションにする。 */
 .panel {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 24px;
-  margin-bottom: 16px;
+  margin-bottom: 44px;
+}
+
+.panel-head,
+.panel > h2 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
 }
 
 .panel-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 8px;
+  margin-bottom: 18px;
 }
 
 .panel-head h2 {
   margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 .note {
-  margin: 8px 0 12px;
-  padding: 8px 12px;
-  border-left: 3px solid var(--accent);
-  background: var(--accent-soft);
-  border-radius: 0 8px 8px 0;
+  margin: 0 0 16px;
+  padding: 4px 0 4px 16px;
+  border-left: 2px solid var(--accent);
+  color: var(--muted);
   font-size: 0.9rem;
 }
 
 .stepper {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  border: 1px solid var(--line);
+  gap: 2px;
+  border: 1px solid var(--line-strong);
   border-radius: 999px;
   padding: 2px;
-  background: var(--bg);
 }
 
 .stepper button {
@@ -461,16 +526,18 @@ svg {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color 0.15s ease;
+  transition:
+    background-color 0.15s var(--ease),
+    color 0.15s var(--ease);
 }
 
 .stepper button:hover:not(:disabled) {
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-ink);
 }
 
 .stepper button:disabled {
-  opacity: 0.35;
+  opacity: 0.32;
   cursor: default;
 }
 
@@ -480,9 +547,9 @@ svg {
 }
 
 .stepper-value {
-  min-width: 64px;
+  min-width: 62px;
   text-align: center;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
   color: var(--muted);
 }
 
@@ -495,13 +562,13 @@ svg {
 .ingredients {
   width: 100%;
   border-collapse: collapse;
-  margin: 8px 0 20px;
+  margin: 0 0 24px;
 }
 
 .ingredients th,
 .ingredients td {
-  padding: 10px 4px;
-  border-bottom: 1px dashed var(--line);
+  padding: 11px 2px;
+  border-bottom: 1px solid var(--line);
   text-align: left;
 }
 
@@ -511,13 +578,13 @@ svg {
 }
 
 .ingredients th {
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .ingredients td {
   text-align: right;
   font-variant-numeric: tabular-nums;
-  color: var(--accent);
+  color: var(--accent-ink);
   font-weight: 600;
   white-space: nowrap;
 }
@@ -532,7 +599,7 @@ svg {
 .steps li {
   counter-increment: step;
   position: relative;
-  padding: 0 0 16px 44px;
+  padding: 0 0 18px 46px;
 }
 
 .steps li:last-child {
@@ -543,33 +610,34 @@ svg {
   content: counter(step);
   position: absolute;
   left: 0;
-  top: 0;
+  top: -1px;
   width: 28px;
   height: 28px;
   border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 0.9rem;
+  border: 1px solid var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--serif);
+  font-weight: 600;
+  font-size: 0.92rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-variant-numeric: tabular-nums;
 }
 
 .memo {
   margin: 0;
   white-space: pre-wrap;
+  color: var(--muted);
 }
 
 /* ---- フォーム ---- */
 
 .form-errors {
-  margin-bottom: 24px;
-  padding: 12px 16px;
-  border: 1px solid var(--danger);
-  border-left-width: 4px;
-  border-radius: 8px;
-  color: var(--danger);
+  margin-bottom: 28px;
+  padding: 12px 0 12px 16px;
+  border-left: 2px solid var(--danger);
+  color: var(--danger-ink);
 }
 
 .form-errors ul {
@@ -579,27 +647,30 @@ svg {
 
 .field {
   display: block;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .field > span {
   display: block;
-  margin-bottom: 6px;
-  font-size: 0.9rem;
+  margin-bottom: 7px;
+  font-size: 0.85rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
   color: var(--muted);
 }
 
 .field input,
 .field textarea {
   width: 100%;
-  padding: 10px 12px;
-  border: 1px solid var(--line);
-  border-radius: 10px;
+  padding: 11px 13px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius);
   background: var(--surface);
   color: var(--ink);
   font: inherit;
-  transition: border-color 0.15s ease;
+  transition:
+    border-color 0.18s var(--ease),
+    box-shadow 0.18s var(--ease);
 }
 
 .field input:focus,
@@ -611,12 +682,14 @@ svg {
 
 .field textarea {
   resize: vertical;
-  line-height: 1.8;
+  line-height: 1.85;
+  font-family: var(--mono);
+  font-size: 0.92rem;
 }
 
 .field-row {
   display: flex;
-  gap: 16px;
+  gap: 18px;
   flex-wrap: wrap;
 }
 
@@ -637,8 +710,9 @@ svg {
 /* ---- 買い物リスト ---- */
 
 .lede {
-  margin: 0 0 24px;
+  margin: 0 0 36px;
   color: var(--muted);
+  max-width: 34rem;
 }
 
 .picks {
@@ -652,8 +726,8 @@ svg {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 10px 0;
-  border-bottom: 1px dashed var(--line);
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
   flex-wrap: wrap;
 }
 
@@ -664,7 +738,7 @@ svg {
 .pick label {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   cursor: pointer;
 }
 
@@ -685,8 +759,8 @@ svg {
 
 .shopping th,
 .shopping td {
-  padding: 10px 4px;
-  border-bottom: 1px dashed var(--line);
+  padding: 11px 2px;
+  border-bottom: 1px solid var(--line);
   text-align: left;
   vertical-align: top;
 }
@@ -697,39 +771,46 @@ svg {
 }
 
 .shopping th {
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .shopping .amount {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
-  color: var(--accent);
+  color: var(--accent-ink);
   font-weight: 600;
 }
 
 .shopping .used-by {
-  color: var(--muted);
-  font-size: 0.85rem;
+  color: var(--faint);
+  font-size: 0.83rem;
   text-align: right;
 }
 
 .list-actions {
   display: flex;
   gap: 12px;
-  margin-top: 20px;
+  margin-top: 24px;
   flex-wrap: wrap;
 }
 
+/* ---- 狭い画面 ---- */
+
 @media (max-width: 480px) {
   .site-main {
-    padding: 24px 16px 48px;
-  }
-
-  .panel {
-    padding: 16px;
+    padding: 28px 18px 56px;
   }
 
   .shopping .used-by {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }
