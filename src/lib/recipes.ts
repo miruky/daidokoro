@@ -1,5 +1,6 @@
 // レシピの型・検証・行形式の取り込み・永続化。
 
+import { isSafeImageUrl } from './image';
 import { scaleAmount } from './quantity';
 
 export interface Ingredient {
@@ -16,6 +17,8 @@ export interface Recipe {
   ingredients: Ingredient[];
   steps: string[];
   memo: string;
+  /** 料理写真のURL(任意)。http(s)のみ受け付ける */
+  image?: string;
   updatedAt: number;
 }
 
@@ -56,13 +59,18 @@ export function parseSteps(text: string): string[] {
 }
 
 /** 検証エラーを日本語で返す。空配列なら妥当 */
-export function validateRecipe(r: Pick<Recipe, 'name' | 'servings' | 'ingredients'>): string[] {
+export function validateRecipe(
+  r: Pick<Recipe, 'name' | 'servings' | 'ingredients' | 'image'>,
+): string[] {
   const errors: string[] = [];
   if (r.name.trim() === '') errors.push('レシピ名を入れてください。');
   if (!Number.isInteger(r.servings) || r.servings < 1 || r.servings > MAX_SERVINGS) {
     errors.push(`人数は1〜${MAX_SERVINGS}の整数にしてください。`);
   }
   if (r.ingredients.length === 0) errors.push('材料を1つ以上入れてください。');
+  if (r.image !== undefined && r.image !== '' && !isSafeImageUrl(r.image)) {
+    errors.push('写真URLは http:// または https:// で始まるものにしてください。');
+  }
   return errors;
 }
 
@@ -94,6 +102,8 @@ function isRecipe(value: unknown): value is Recipe {
     Array.isArray(r.steps) &&
     (r.steps as unknown[]).every((s) => typeof s === 'string') &&
     typeof r.memo === 'string' &&
+    // image は後から追加した任意項目。古い保存データには無いので未定義も許す
+    (r.image === undefined || typeof r.image === 'string') &&
     typeof r.updatedAt === 'number'
   );
 }
