@@ -81,6 +81,13 @@ describe('validateRecipe', () => {
     expect(validateRecipe(recipe({ servings: 2.5 }))).toHaveLength(1);
     expect(validateRecipe(recipe({ ingredients: [] }))).toHaveLength(1);
   });
+
+  it('写真URLは空・http(s)を許し、それ以外を弾く', () => {
+    expect(validateRecipe(recipe({ image: '' }))).toEqual([]);
+    expect(validateRecipe(recipe({ image: 'https://images.unsplash.com/p' }))).toEqual([]);
+    expect(validateRecipe(recipe({ image: 'javascript:alert(1)' }))).toHaveLength(1);
+    expect(validateRecipe(recipe({ image: 'photo.jpg' }))).toHaveLength(1);
+  });
 });
 
 describe('scaleIngredients', () => {
@@ -110,6 +117,20 @@ describe('serialize / deserialize', () => {
     const ok = recipe();
     const json = JSON.stringify([ok, { id: 'x', name: '' }, 42]);
     expect(deserializeRecipes(json)).toEqual([ok]);
+  });
+
+  it('写真つきは往復し、image欄が無い旧データも読める', () => {
+    const withImage = recipe({ image: 'https://images.unsplash.com/p' });
+    expect(deserializeRecipes(serializeRecipes([withImage]))).toEqual([withImage]);
+    // image を後から足したので、古い保存データ(image無し)も妥当として読む
+    const legacy = recipe();
+    delete (legacy as { image?: string }).image;
+    expect(deserializeRecipes(JSON.stringify([legacy]))).toEqual([legacy]);
+  });
+
+  it('imageが文字列でない要素は読み飛ばす', () => {
+    const bad = { ...recipe(), image: 123 };
+    expect(deserializeRecipes(JSON.stringify([bad]))).toEqual([]);
   });
 });
 
