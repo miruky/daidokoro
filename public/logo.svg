@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="logo-title">
+  <title id="logo-title">daidokoro - 鍋から湯気が立つロゴ</title>
+  <style>
+    .bg { fill: #f7f3ec; }
+    .ink { stroke: #29241e; }
+    .accent { stroke: #b9551c; }
+    @media (prefers-color-scheme: dark) {
+      .bg { fill: #1a1714; }
+      .ink { stroke: #ece5da; }
+      .accent { stroke: #e58a4e; }
+    }
+  </style>
+  <rect class="bg" width="128" height="128" rx="28"/>
+  <g fill="none" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+    <path class="accent" d="M50 22c-4 5 4 8 0 13"/>
+    <path class="accent" d="M78 22c-4 5 4 8 0 13"/>
+    <path class="ink" d="M28 64c12-13 60-13 72 0"/>
+    <circle class="ink" cx="64" cy="50" r="4.5"/>
+    <path class="ink" d="M22 76h84v4a28 28 0 0 1-28 28H50a28 28 0 0 1-28-28z"/>
+  </g>
+</svg>
