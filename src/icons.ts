@@ -33,4 +33,11 @@ export const icons = {
   ),
   download: svg('<path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/>'),
   check: svg('<path d="m5 13 4.5 4.5L19 7"/>'),
+  image: svg(
+    '<rect x="3.5" y="5" width="17" height="14" rx="2"/>' +
+      '<circle cx="8.5" cy="10" r="1.3"/>' +
+      '<path d="m4.5 17 4.5-4.2a2 2 0 0 1 2.7 0L20 19"/>',
+  ),
+  // 写真の無いレシピに置く配膳ドーム(クローシュ)。料理を示す装飾
+  dish: svg('<path d="M4 16.5a8 8 0 0 1 16 0"/><path d="M2.5 16.5h19"/><path d="M12 8.5v-2"/>'),
 } as const;

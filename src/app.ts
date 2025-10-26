@@ -14,6 +14,7 @@ import {
 } from './lib/recipes';
 import { buildShoppingList, shoppingListMarkdown, type ShoppingSelection } from './lib/shopping';
 import { parseRoute, routeHash, type Route } from './lib/route';
+import { imageSrcset, imageVariant, isSafeImageUrl } from './lib/image';
 import { icons } from './icons';
 
 const ESCAPES: Record<string, string> = {
@@ -36,6 +37,36 @@ function formatDate(epoch: number): string {
   });
 }
 
+interface ImageOpts {
+  /** 横/縦の比 */
+  aspect: number;
+  /** sizes 属性。表示実寸をブラウザへ伝える */
+  sizes: string;
+  /** srcset に並べる候補幅。最大値を src の既定にする */
+  widths: number[];
+}
+
+/**
+ * 安全なURLを持つ画像だけを <img> にする。読み込み完了で is-loaded が付き、
+ * CSSでふわっと出す。寸法属性でアスペクト比を確保しレイアウトのずれを防ぐ。
+ */
+function imageTag(url: string, alt: string, opts: ImageOpts): string {
+  const max = Math.max(...opts.widths);
+  const src = imageVariant(url, { width: max, aspect: opts.aspect });
+  const srcset = imageSrcset(url, opts.widths, opts.aspect);
+  const height = Math.round(max / opts.aspect);
+  return (
+    `<img class="ph" src="${esc(src)}" srcset="${esc(srcset)}" sizes="${esc(opts.sizes)}" ` +
+    `alt="${esc(alt)}" loading="lazy" decoding="async" width="${max}" height="${height}" ` +
+    `onload="this.classList.add('is-loaded')" />`
+  );
+}
+
+/** 写真の無いレシピ用。線画の器を淡く置いて一覧のリズムを保つ */
+function imagePlaceholder(aspectClass: string): string {
+  return `<div class="thumb-empty ${aspectClass}" aria-hidden="true">${icons.dish}</div>`;
+}
+
 /** 編集フォームの入力値。検証に失敗したとき入力を失わないために持ち回る */
 interface Draft {
   name: string;
@@ -43,6 +74,7 @@ interface Draft {
   ingredients: string;
   steps: string;
   memo: string;
+  image: string;
 }
 
 export interface AppDeps {
@@ -99,6 +131,26 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
       </header>`;
   }
 
+  // 一覧の頭に置く全幅のヒーロー。仕込み中の俎板の写真にタイトルを重ねる。
+  function masthead(): string {
+    const hero = 'https://images.unsplash.com/photo-1466637574441-749b8f19452f';
+    return `
+      <section class="masthead" aria-labelledby="masthead-title">
+        <div class="masthead-media">${imageTag(hero, '', {
+          aspect: 2.4,
+          sizes: '100vw',
+          widths: [900, 1400, 1960],
+        })}</div>
+        <div class="masthead-inner">
+          <p class="kicker">Recipe notebook</p>
+          <h1 id="masthead-title">台所の手控え</h1>
+          <p class="masthead-lede">
+            作るものを書き留め、人数に合わせて分量を換算し、複数のレシピの材料を名寄せして買い物リストにまとめます。
+          </p>
+        </div>
+      </section>`;
+  }
+
   function stepper(opts: {
     idPrefix: string;
     value: number;
@@ -142,12 +194,23 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
       .map((r, i) => {
         const names = r.ingredients.map((ing) => ing.name);
         const preview = names.slice(0, 4).join('、') + (names.length > 4 ? ' ほか' : '');
+        const media =
+          r.image && isSafeImageUrl(r.image)
+            ? imageTag(r.image, '', {
+                aspect: 1,
+                sizes: '(max-width: 560px) 76px, 104px',
+                widths: [152, 304],
+              })
+            : imagePlaceholder('thumb-sq');
         return `
           <li class="card" style="--i:${i}">
             <a href="${routeHash({ view: 'detail', id: r.id })}">
-              <h2>${esc(r.name)}</h2>
-              <p class="card-meta">${r.servings}人前・材料${r.ingredients.length}品</p>
-              <p class="card-preview">${esc(preview)}</p>
+              <div class="card-media">${media}</div>
+              <div class="card-body">
+                <h2><span>${esc(r.name)}</span></h2>
+                <p class="card-meta">${r.servings}人前・材料${r.ingredients.length}品</p>
+                <p class="card-preview">${esc(preview)}</p>
+              </div>
             </a>
           </li>`;
       })
@@ -200,9 +263,18 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
         ? `<p class="note">${recipe.servings}人前のレシピを${servings}人前に換算しています。</p>`
         : '';
     const deleteLabel = confirmingDelete ? 'もう一度押すと削除' : '削除';
+    const hero =
+      recipe.image && isSafeImageUrl(recipe.image)
+        ? `<figure class="detail-hero">${imageTag(recipe.image, `${recipe.name}の写真`, {
+            aspect: 3 / 2,
+            sizes: '(max-width: 800px) 100vw, 700px',
+            widths: [560, 840, 1200],
+          })}</figure>`
+        : '';
     return `
       <article class="view">
         <a class="back" href="#/">${icons.back}<span>一覧へ戻る</span></a>
+        ${hero}
         <div class="detail-head">
           <h1>${esc(recipe.name)}</h1>
           <div class="detail-actions">
@@ -269,13 +341,15 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
   // ---- 作成・編集 ----
 
   function draftFrom(recipe: Recipe | null): Draft {
-    if (!recipe) return { name: '', servings: '2', ingredients: '', steps: '', memo: '' };
+    if (!recipe)
+      return { name: '', servings: '2', ingredients: '', steps: '', memo: '', image: '' };
     return {
       name: recipe.name,
       servings: String(recipe.servings),
       ingredients: ingredientsToLines(recipe.ingredients),
       steps: recipe.steps.join('\n'),
       memo: recipe.memo,
+      image: recipe.image ?? '',
     };
   }
 
@@ -318,6 +392,22 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
           <span>メモ(任意)</span>
           <textarea name="memo" rows="3">${esc(d.memo)}</textarea>
         </label>
+        <label class="field">
+          <span>写真URL(任意)</span>
+          <input name="image" type="url" inputmode="url" autocomplete="off"
+            placeholder="https://images.unsplash.com/… など" value="${esc(d.image)}" />
+        </label>
+        <figure class="image-preview" id="image-preview" ${
+          d.image && isSafeImageUrl(d.image) ? '' : 'hidden'
+        }>${
+          d.image && isSafeImageUrl(d.image)
+            ? imageTag(d.image, '写真プレビュー', {
+                aspect: 3 / 2,
+                sizes: '(max-width: 800px) 100vw, 700px',
+                widths: [400, 700],
+              })
+            : ''
+        }</figure>
         <div class="form-actions">
           <button type="submit" class="button primary">${icons.check}<span>保存</span></button>
           <a class="button" href="${backTarget}">キャンセル</a>
@@ -327,6 +417,22 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
 
   function bindEditView(recipe: Recipe | null): void {
     const form = root.querySelector<HTMLFormElement>('#recipe-form');
+    // 写真URLを打つたびにプレビューを差し替える(安全なURLのときだけ表示)
+    const imageInput = form?.querySelector<HTMLInputElement>('input[name="image"]');
+    const preview = root.querySelector<HTMLElement>('#image-preview');
+    imageInput?.addEventListener('input', () => {
+      if (!preview) return;
+      const url = imageInput.value.trim();
+      const ok = url !== '' && isSafeImageUrl(url);
+      preview.innerHTML = ok
+        ? imageTag(url, '写真プレビュー', {
+            aspect: 3 / 2,
+            sizes: '(max-width: 800px) 100vw, 700px',
+            widths: [400, 700],
+          })
+        : '';
+      preview.hidden = !ok;
+    });
     form?.addEventListener('submit', (e) => {
       e.preventDefault();
       const data = new FormData(form);
@@ -340,12 +446,15 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
         ingredients: read('ingredients'),
         steps: read('steps'),
         memo: read('memo'),
+        image: read('image'),
       };
       const servings = Number(draft.servings);
+      const image = draft.image.trim();
       const candidate = {
         name: draft.name,
         servings,
         ingredients: parseIngredientLines(draft.ingredients),
+        image,
       };
       draftErrors = validateRecipe(candidate);
       if (draftErrors.length > 0) {
@@ -360,6 +469,7 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
         ingredients: candidate.ingredients,
         steps: parseSteps(draft.steps),
         memo: draft.memo.trim(),
+        ...(image !== '' ? { image } : {}),
         updatedAt: Date.now(),
       };
       recipes = recipe ? recipes.map((r) => (r.id === recipe.id ? saved : r)) : [saved, ...recipes];
@@ -534,11 +644,16 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
     }
     root.innerHTML = `
       ${header()}
+      ${route.view === 'list' ? masthead() : ''}
       <main class="site-main">${body}</main>
       <footer class="site-footer">
         <p>daidokoro — レシピと買い物リスト。データはこの端末のブラウザにだけ保存されます。</p>
       </footer>`;
     bind();
+    // キャッシュ済みで onload が発火しない画像も、表示状態に揃える
+    for (const img of root.querySelectorAll<HTMLImageElement>('img.ph')) {
+      if (img.complete) img.classList.add('is-loaded');
+    }
     if (activeId !== '') document.getElementById(activeId)?.focus();
   }
 

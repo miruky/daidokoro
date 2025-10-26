@@ -27,6 +27,7 @@ export function seedRecipes(now: number): Recipe[] {
         '火を止めてそのまま10分置き、味を含ませる',
       ],
       memo: '前日に作って一晩置くと味がしみる。',
+      image: 'https://images.unsplash.com/photo-1604908176997-125f25cc6f3d',
       updatedAt: now,
     },
     {
@@ -51,6 +52,7 @@ export function seedRecipes(now: number): Recipe[] {
         'キャベツを添えて盛り付ける',
       ],
       memo: '',
+      image: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836',
       updatedAt: now,
     },
     {
@@ -71,6 +73,7 @@ export function seedRecipes(now: number): Recipe[] {
         '火を弱めて味噌を溶き入れ、長ねぎを加えて火を止める',
       ],
       memo: '味噌は沸騰させると香りが飛ぶ。',
+      image: 'https://images.unsplash.com/photo-1569718212165-3a8278d5f624',
       updatedAt: now,
     },
   ];
