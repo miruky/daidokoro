@@ -2,12 +2,14 @@ import { describe, expect, it } from 'vitest';
 import {
   createStore,
   deserializeRecipes,
+  duplicateRecipe,
   ingredientsToLines,
   newRecipeId,
   parseIngredientLines,
   parseSteps,
   scaleIngredients,
   serializeRecipes,
+  sortRecipes,
   validateRecipe,
   type Recipe,
 } from './recipes';
@@ -153,5 +155,66 @@ describe('createStore', () => {
 describe('newRecipeId', () => {
   it('呼ぶたびに違うIDを返す', () => {
     expect(newRecipeId()).not.toBe(newRecipeId());
+  });
+});
+
+describe('sortRecipes', () => {
+  const a = recipe({
+    id: 'a',
+    name: 'カレー',
+    updatedAt: 300,
+    ingredients: [{ name: 'x', amount: '1' }],
+  });
+  const b = recipe({
+    id: 'b',
+    name: 'あんかけ',
+    updatedAt: 100,
+    ingredients: [
+      { name: 'x', amount: '1' },
+      { name: 'y', amount: '2' },
+    ],
+  });
+  const c = recipe({ id: 'c', name: 'さば味噌', updatedAt: 200, ingredients: [] });
+
+  it('新しい順は更新日時の降順', () => {
+    expect(sortRecipes([b, a, c], 'updated').map((r) => r.id)).toEqual(['a', 'c', 'b']);
+  });
+
+  it('名前順はかなの照合順', () => {
+    expect(sortRecipes([a, b, c], 'name').map((r) => r.id)).toEqual(['b', 'a', 'c']);
+  });
+
+  it('材料順は品数の少ない順', () => {
+    expect(sortRecipes([a, b, c], 'ingredients').map((r) => r.id)).toEqual(['c', 'a', 'b']);
+  });
+
+  it('元の配列を書き換えない', () => {
+    const input = [b, a, c];
+    sortRecipes(input, 'name');
+    expect(input.map((r) => r.id)).toEqual(['b', 'a', 'c']);
+  });
+});
+
+describe('duplicateRecipe', () => {
+  it('新しいIDと「(コピー)」名、指定時刻を持つ', () => {
+    const original = recipe({ id: 'orig', name: '肉じゃが' });
+    const copy = duplicateRecipe(original, 999);
+    expect(copy.id).not.toBe('orig');
+    expect(copy.name).toBe('肉じゃが (コピー)');
+    expect(copy.updatedAt).toBe(999);
+  });
+
+  it('材料・手順は別配列で、複製を触っても元が変わらない', () => {
+    const original = recipe();
+    const copy = duplicateRecipe(original);
+    copy.ingredients[0]!.name = '別物';
+    copy.steps.push('追加');
+    expect(original.ingredients[0]?.name).toBe('じゃがいも');
+    expect(original.steps).toHaveLength(2);
+  });
+
+  it('写真URLは引き継ぐ', () => {
+    const copy = duplicateRecipe(recipe({ image: 'https://images.unsplash.com/p' }));
+    expect(copy.image).toBe('https://images.unsplash.com/p');
   });
 });

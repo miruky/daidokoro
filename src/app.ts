@@ -100,6 +100,8 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
   let copied = false;
   /** 読み込み結果の通知。一覧の下に出し、画面遷移で消す */
   let notice = '';
+  /** 入場演出は画面遷移時だけ。ステッパー等の再描画では再生しない */
+  let animateView = true;
 
   const save = (): void => store.save(recipes);
   const find = (id: string): Recipe | undefined => recipes.find((r) => r.id === id);
@@ -115,6 +117,7 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
     draftErrors = [];
     copied = false;
     notice = '';
+    animateView = true;
     render();
   });
 
@@ -690,10 +693,14 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
         bind = bindShoppingView;
         break;
     }
+    const entering = animateView;
+    animateView = false;
     root.innerHTML = `
       ${header()}
-      ${route.view === 'list' ? masthead() : ''}
-      <main class="site-main">${body}</main>
+      <div class="page${entering ? ' is-enter' : ''}">
+        ${route.view === 'list' ? masthead() : ''}
+        <main class="site-main">${body}</main>
+      </div>
       <footer class="site-footer">
         <p>daidokoro — レシピと買い物リスト。データはこの端末のブラウザにだけ保存されます。</p>
       </footer>`;
@@ -702,8 +709,34 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
     for (const img of root.querySelectorAll<HTMLImageElement>('img.ph')) {
       if (img.complete) img.classList.add('is-loaded');
     }
+    // 入場演出が終わったら印を外し、検索など部分更新で再生されないようにする
+    if (entering) {
+      const page = root.querySelector('.page');
+      window.setTimeout(() => page?.classList.remove('is-enter'), 850);
+    }
     if (activeId !== '') document.getElementById(activeId)?.focus();
   }
+
+  // mastheadの軽い視差。スクロール量の一部だけ画像を遅らせて層をつくる。
+  // reduced-motion では一切動かさない。rAFで間引いてスクロールを重くしない。
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  let parallaxQueued = false;
+  const applyParallax = (): void => {
+    parallaxQueued = false;
+    const media = root.querySelector<HTMLElement>('.masthead-media');
+    if (media) {
+      media.style.transform = `translate3d(0, ${Math.min(window.scrollY * 0.2, 64)}px, 0)`;
+    }
+  };
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (reduceMotion.matches || parallaxQueued) return;
+      parallaxQueued = true;
+      requestAnimationFrame(applyParallax);
+    },
+    { passive: true },
+  );
 
   render();
 }
