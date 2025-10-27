@@ -292,8 +292,13 @@ svg {
 
 .masthead-media {
   position: absolute;
-  inset: 0;
+  left: 0;
+  right: 0;
+  /* 視差で上下にずらしても隙間が出ないよう、上下に余白を持たせて広げる */
+  top: -64px;
+  bottom: -64px;
   z-index: -2;
+  will-change: transform;
 }
 
 .masthead-media .ph {
@@ -381,28 +386,30 @@ svg {
 
 /* ---- 入場モーション ---- */
 
+/* 入場演出は .is-enter(画面遷移時のみ付与)配下に限る。
+   ステッパーや検索の部分更新では再生せず、ちらつきを避ける。 */
 @media (prefers-reduced-motion: no-preference) {
-  .view {
+  .is-enter .view {
     animation: view-in 0.4s var(--ease) both;
   }
 
-  .masthead-inner > * {
+  .is-enter .masthead-inner > * {
     animation: rise 0.55s var(--ease) both;
   }
 
-  .masthead-inner h1 {
+  .is-enter .masthead-inner h1 {
     animation-delay: 70ms;
   }
 
-  .masthead-lede {
+  .is-enter .masthead-lede {
     animation-delay: 140ms;
   }
 
-  .cards li,
-  .picks li,
-  .ingredients tr,
-  .shopping tr,
-  .steps li {
+  .is-enter .cards li,
+  .is-enter .picks li,
+  .is-enter .ingredients tr,
+  .is-enter .shopping tr,
+  .is-enter .steps li {
     animation: rise 0.4s var(--ease) both;
     animation-delay: calc(var(--i, 0) * 28ms);
   }
@@ -592,6 +599,11 @@ svg {
 
 .card-body {
   min-width: 0;
+  transition: transform 0.3s var(--ease);
+}
+
+.cards a:hover .card-body {
+  transform: translateX(4px);
 }
 
 .cards h2 {
