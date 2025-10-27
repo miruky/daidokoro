@@ -129,7 +129,10 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
 
   function header(): string {
     const onShopping = route.view === 'shopping';
-    const count = cart.size > 0 ? `<span class="cart-count">${cart.size}</span>` : '';
+    const count =
+      cart.size > 0
+        ? `<span class="cart-count" aria-label="${cart.size}品を選択中">${cart.size}</span>`
+        : '';
     return `
       <header class="site-header">
         <div class="site-header-inner">
@@ -195,11 +198,14 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
   function listResults(): string {
     const hits = filteredRecipes();
     if (hits.length === 0) {
-      const message =
-        searchQuery.trim() === ''
-          ? 'レシピがまだありません。「新しいレシピ」から登録してください。'
-          : `「${esc(searchQuery.trim())}」に当てはまるレシピがありません。`;
-      return `<p class="empty">${message}</p>`;
+      if (searchQuery.trim() === '') {
+        return `
+          <div class="empty-state">
+            ${icons.dish}
+            <p>レシピがまだありません。上の「新しいレシピ」から書き留めるか、<br />書き出したファイルを下の「読み込む」から取り込めます。</p>
+          </div>`;
+      }
+      return `<p class="empty">「${esc(searchQuery.trim())}」に当てはまるレシピがありません。</p>`;
     }
     const cards = hits
       .map((r, i) => {
@@ -260,7 +266,8 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
           <button type="button" class="link-button" id="import">
             ${icons.upload}<span>読み込む</span>
           </button>
-          <input type="file" id="import-file" accept="application/json,.json" hidden />
+          <input type="file" id="import-file" accept="application/json,.json"
+            aria-label="バックアップJSONファイルを選択" hidden />
           ${notice ? `<span class="data-notice" role="status">${esc(notice)}</span>` : ''}
         </div>
       </section>`;
@@ -744,7 +751,18 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
       const page = root.querySelector('.page');
       window.setTimeout(() => page?.classList.remove('is-enter'), 850);
     }
-    if (activeId !== '') document.getElementById(activeId)?.focus();
+    // 部分更新は操作中の要素へフォーカスを戻す。画面遷移では見出しへ移し、
+    // 読み上げに切り替わりを伝える(スクロールは動かさない)。
+    const active = activeId !== '' ? document.getElementById(activeId) : null;
+    if (active) {
+      active.focus({ preventScroll: true });
+    } else if (entering) {
+      const heading = root.querySelector<HTMLElement>('.page h1');
+      if (heading) {
+        heading.tabIndex = -1;
+        heading.focus({ preventScroll: true });
+      }
+    }
   }
 
   // mastheadの軽い視差。スクロール量の一部だけ画像を遅らせて層をつくる。
