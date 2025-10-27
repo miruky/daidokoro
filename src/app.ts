@@ -2,15 +2,18 @@
 // 変更のたびに現在のビューを丸ごと描き直す。フォーカスはidを頼りに復元する。
 
 import {
+  duplicateRecipe,
   ingredientsToLines,
   MAX_SERVINGS,
   newRecipeId,
   parseIngredientLines,
   parseSteps,
   scaleIngredients,
+  sortRecipes,
   validateRecipe,
   type Recipe,
   type RecipeStore,
+  type SortKey,
 } from './lib/recipes';
 import { buildShoppingList, shoppingListMarkdown, type ShoppingSelection } from './lib/shopping';
 import { parseRoute, routeHash, type Route } from './lib/route';
@@ -88,6 +91,7 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
   let recipes = initialRecipes;
   let route = parseRoute(location.hash);
   let searchQuery = '';
+  let sortKey: SortKey = 'updated';
   /** 買い物かご。レシピid -> 作る人数 */
   const cart = new Map<string, number>();
   /** 詳細画面で換算中の人数。画面を離れるとレシピ本来の人数に戻る */
@@ -185,7 +189,7 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
         : recipes.filter(
             (r) => r.name.includes(q) || r.ingredients.some((i) => i.name.includes(q)),
           );
-    return [...hits].sort((a, b) => b.updatedAt - a.updatedAt);
+    return sortRecipes(hits, sortKey);
   }
 
   function listResults(): string {
@@ -234,6 +238,18 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
             <input type="search" id="search" placeholder="レシピ名・材料で探す"
               value="${esc(searchQuery)}" aria-label="レシピを検索" />
           </label>
+          ${
+            recipes.length > 1
+              ? `<label class="sort">
+            <span class="sr-only">並び替え</span>
+            <select id="sort" aria-label="レシピの並び替え">
+              <option value="updated"${sortKey === 'updated' ? ' selected' : ''}>新しい順</option>
+              <option value="name"${sortKey === 'name' ? ' selected' : ''}>名前順</option>
+              <option value="ingredients"${sortKey === 'ingredients' ? ' selected' : ''}>材料の少ない順</option>
+            </select>
+          </label>`
+              : ''
+          }
           <a class="button primary" href="#/new">${icons.plus}<span>新しいレシピ</span></a>
         </div>
         <div id="results">${listResults()}</div>
@@ -255,6 +271,12 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
     const results = root.querySelector<HTMLElement>('#results');
     input?.addEventListener('input', () => {
       searchQuery = input.value;
+      if (results) results.innerHTML = listResults();
+    });
+
+    const sort = root.querySelector<HTMLSelectElement>('#sort');
+    sort?.addEventListener('change', () => {
+      sortKey = sort.value as SortKey;
       if (results) results.innerHTML = listResults();
     });
 
@@ -332,6 +354,8 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
           <div class="detail-actions">
             <a class="button" href="${routeHash({ view: 'edit', id: recipe.id })}">
               ${icons.pencil}<span>編集</span></a>
+            <button type="button" class="button" id="duplicate">
+              ${icons.copy}<span>複製</span></button>
             <button type="button" class="button danger ${confirmingDelete ? 'confirming' : ''}"
               id="delete">${icons.trash}<span>${deleteLabel}</span></button>
           </div>
@@ -369,6 +393,12 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
     root.querySelector('#add-cart')?.addEventListener('click', () => {
       cart.set(recipe.id, viewServings ?? recipe.servings);
       render();
+    });
+    root.querySelector('#duplicate')?.addEventListener('click', () => {
+      const copy = duplicateRecipe(recipe);
+      recipes = [copy, ...recipes];
+      save();
+      navigate({ view: 'edit', id: copy.id });
     });
     root.querySelector('#delete')?.addEventListener('click', () => {
       if (!confirmingDelete) {
