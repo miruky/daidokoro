@@ -81,6 +81,33 @@ export function scaleIngredients(recipe: Recipe, servings: number): Ingredient[]
   return recipe.ingredients.map((i) => ({ name: i.name, amount: scaleAmount(i.amount, factor) }));
 }
 
+export type SortKey = 'updated' | 'name' | 'ingredients';
+
+/** 一覧の並び順。新しい順・名前順(かな照合)・材料の少ない順 */
+export function sortRecipes(recipes: Recipe[], key: SortKey): Recipe[] {
+  const sorted = [...recipes];
+  switch (key) {
+    case 'name':
+      return sorted.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+    case 'ingredients':
+      return sorted.sort((a, b) => a.ingredients.length - b.ingredients.length);
+    default:
+      return sorted.sort((a, b) => b.updatedAt - a.updatedAt);
+  }
+}
+
+/** レシピを複製する。材料・手順は別配列に複製し、元を書き換えない */
+export function duplicateRecipe(recipe: Recipe, now: number = Date.now()): Recipe {
+  return {
+    ...recipe,
+    id: newRecipeId(),
+    name: `${recipe.name} (コピー)`,
+    ingredients: recipe.ingredients.map((i) => ({ ...i })),
+    steps: [...recipe.steps],
+    updatedAt: now,
+  };
+}
+
 function isIngredient(value: unknown): value is Ingredient {
   if (typeof value !== 'object' || value === null) return false;
   const i = value as Record<string, unknown>;
