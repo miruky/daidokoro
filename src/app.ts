@@ -15,6 +15,7 @@ import {
 import { buildShoppingList, shoppingListMarkdown, type ShoppingSelection } from './lib/shopping';
 import { parseRoute, routeHash, type Route } from './lib/route';
 import { imageSrcset, imageVariant, isSafeImageUrl } from './lib/image';
+import { exportBackup, mergeRecipes, parseBackup } from './lib/backup';
 import { icons } from './icons';
 
 const ESCAPES: Record<string, string> = {
@@ -97,6 +98,8 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
   let draft: Draft | null = null;
   let draftErrors: string[] = [];
   let copied = false;
+  /** 読み込み結果の通知。一覧の下に出し、画面遷移で消す */
+  let notice = '';
 
   const save = (): void => store.save(recipes);
   const find = (id: string): Recipe | undefined => recipes.find((r) => r.id === id);
@@ -111,6 +114,7 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
     draft = null;
     draftErrors = [];
     copied = false;
+    notice = '';
     render();
   });
 
@@ -230,6 +234,16 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
           <a class="button primary" href="#/new">${icons.plus}<span>新しいレシピ</span></a>
         </div>
         <div id="results">${listResults()}</div>
+        <div class="data-bar">
+          <button type="button" class="link-button" id="export" ${
+            recipes.length === 0 ? 'disabled' : ''
+          }>${icons.download}<span>レシピを書き出す</span></button>
+          <button type="button" class="link-button" id="import">
+            ${icons.upload}<span>読み込む</span>
+          </button>
+          <input type="file" id="import-file" accept="application/json,.json" hidden />
+          ${notice ? `<span class="data-notice" role="status">${esc(notice)}</span>` : ''}
+        </div>
       </section>`;
   }
 
@@ -239,6 +253,40 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
     input?.addEventListener('input', () => {
       searchQuery = input.value;
       if (results) results.innerHTML = listResults();
+    });
+
+    root.querySelector('#export')?.addEventListener('click', () => {
+      const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+      const url = URL.createObjectURL(
+        new Blob([exportBackup(recipes)], { type: 'application/json' }),
+      );
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `daidokoro-recipes-${stamp}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    const fileInput = root.querySelector<HTMLInputElement>('#import-file');
+    root.querySelector('#import')?.addEventListener('click', () => fileInput?.click());
+    fileInput?.addEventListener('change', () => {
+      const file = fileInput.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const incoming = parseBackup(typeof reader.result === 'string' ? reader.result : '');
+        if (incoming.length === 0) {
+          notice = '取り込めるレシピが見つかりませんでした。';
+          render();
+          return;
+        }
+        const result = mergeRecipes(recipes, incoming);
+        recipes = result.recipes;
+        save();
+        notice = `${result.added}件を追加・${result.updated}件を更新しました。`;
+        render();
+      };
+      reader.readAsText(file);
     });
   }
 
@@ -275,6 +323,7 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
       <article class="view">
         <a class="back" href="#/">${icons.back}<span>一覧へ戻る</span></a>
         ${hero}
+        <p class="eyebrow">${formatDate(recipe.updatedAt)} 更新</p>
         <div class="detail-head">
           <h1>${esc(recipe.name)}</h1>
           <div class="detail-actions">
@@ -284,7 +333,6 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
               id="delete">${icons.trash}<span>${deleteLabel}</span></button>
           </div>
         </div>
-        <p class="meta">${formatDate(recipe.updatedAt)} 更新</p>
         <section class="panel">
           <div class="panel-head">
             <h2>材料</h2>

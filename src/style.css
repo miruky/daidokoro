@@ -30,6 +30,13 @@
   --shell: 46rem;
   --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
   --radius: 9px;
+
+  /* タイポグラフィの型(モジュラースケール)。見出し・本文・補足で段差をつける */
+  --text-sm: 0.86rem;
+  --text-base: 1rem;
+  --text-lg: 1.22rem;
+  --text-xl: clamp(1.5rem, 3vw, 1.9rem);
+  --text-display: clamp(2.1rem, 5.4vw, 3rem);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -82,11 +89,12 @@ h3 {
 }
 
 h1 {
-  font-size: clamp(1.5rem, 3vw, 1.85rem);
+  font-size: var(--text-xl);
+  letter-spacing: 0.01em;
 }
 
 h2 {
-  font-size: 1.18rem;
+  font-size: var(--text-lg);
 }
 
 a {
@@ -320,7 +328,7 @@ svg {
 .masthead-inner h1 {
   margin: 10px 0 0;
   color: #fdf8f1;
-  font-size: clamp(2rem, 5.4vw, 3rem);
+  font-size: var(--text-display);
   letter-spacing: 0.04em;
 }
 
@@ -626,6 +634,51 @@ svg {
   border-bottom: 1px solid var(--line);
 }
 
+/* 書き出し・読み込みの控えめなデータ操作行。罫線で本文と分ける */
+.data-bar {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin-top: 32px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  flex-wrap: wrap;
+}
+
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  transition: color 0.18s var(--ease);
+}
+
+.link-button svg {
+  width: 15px;
+  height: 15px;
+}
+
+.link-button:hover:not(:disabled) {
+  color: var(--accent-ink);
+}
+
+.link-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.data-notice {
+  margin-left: auto;
+  color: var(--accent-ink);
+  font-size: var(--text-sm);
+}
+
 /* ---- 詳細 ---- */
 
 .back {
@@ -649,6 +702,7 @@ svg {
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+  margin-bottom: 38px;
 }
 
 .detail-actions {
@@ -656,11 +710,14 @@ svg {
   gap: 8px;
 }
 
-.meta {
-  margin: 8px 0 40px;
-  color: var(--faint);
-  font-size: 0.82rem;
-  letter-spacing: 0.02em;
+/* タイトル上の小見出し。更新日を据えて視線を本題へ運ぶ */
+.eyebrow {
+  margin: 0 0 10px;
+  color: var(--accent-ink);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  font-variant-numeric: tabular-nums;
 }
 
 /* パネルは囲み箱でなく、見出しの罫で仕切るセクションにする。 */

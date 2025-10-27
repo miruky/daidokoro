@@ -32,6 +32,7 @@ export const icons = {
     '<rect x="9" y="9" width="11" height="11" rx="2"/>' + '<path d="M5 15V5a2 2 0 0 1 2-2h10"/>',
   ),
   download: svg('<path d="M12 4v11"/><path d="m7 11 5 5 5-5"/><path d="M5 20h14"/>'),
+  upload: svg('<path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M5 20h14"/>'),
   check: svg('<path d="m5 13 4.5 4.5L19 7"/>'),
   image: svg(
     '<rect x="3.5" y="5" width="17" height="14" rx="2"/>' +
