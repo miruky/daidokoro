@@ -668,6 +668,30 @@ svg {
   border-bottom: 1px solid var(--line);
 }
 
+/* レシピが1件も無いときの空状態。器のアイコンと案内を中央に置く */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 18px;
+  padding: 72px 24px;
+  color: var(--faint);
+  border-top: 1px solid var(--line);
+}
+
+.empty-state svg {
+  width: 52px;
+  height: 52px;
+  color: var(--line-strong);
+}
+
+.empty-state p {
+  margin: 0;
+  max-width: 30rem;
+  line-height: 1.95;
+}
+
 /* 書き出し・読み込みの控えめなデータ操作行。罫線で本文と分ける */
 .data-bar {
   display: flex;
@@ -742,6 +766,7 @@ svg {
 .detail-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
 /* タイトル上の小見出し。更新日を据えて視線を本題へ運ぶ */
