@@ -534,6 +534,28 @@ svg {
   outline: none;
 }
 
+/* 並び替えは検索と同じ下線づけの控えめなコントロールにそろえる */
+.sort select {
+  border: 0;
+  border-bottom: 1px solid var(--line-strong);
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  padding: 7px 2px;
+  cursor: pointer;
+  transition: border-color 0.18s var(--ease);
+}
+
+.sort select:hover {
+  color: var(--ink);
+}
+
+.sort select:focus-visible {
+  outline: none;
+  border-color: var(--accent);
+}
+
 /* レシピは箱に詰めず、罫線と余白で区切る編集的な一覧にする。 */
 .cards {
   list-style: none;
