@@ -41,4 +41,9 @@ export const icons = {
   ),
   // 写真の無いレシピに置く配膳ドーム(クローシュ)。料理を示す装飾
   dish: svg('<path d="M4 16.5a8 8 0 0 1 16 0"/><path d="M2.5 16.5h19"/><path d="M12 8.5v-2"/>'),
+  print: svg(
+    '<path d="M7 9V4h10v5"/>' +
+      '<path d="M7 18H5a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2h-2"/>' +
+      '<rect x="7" y="15" width="10" height="6" rx="1"/>',
+  ),
 } as const;
