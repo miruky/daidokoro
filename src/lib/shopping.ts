@@ -69,15 +69,25 @@ export function buildShoppingList(selections: ShoppingSelection[]): ShoppingItem
   });
 }
 
-/** チェックボックス付きMarkdownにする */
-export function shoppingListMarkdown(items: ShoppingItem[], heading = '買い物リスト'): string {
+/** まだ買っていない品目の数。チェック済みは名前で判定する。 */
+export function countRemaining(items: ShoppingItem[], checked: ReadonlySet<string>): number {
+  return items.reduce((n, item) => (checked.has(item.name) ? n : n + 1), 0);
+}
+
+/** チェックボックス付きMarkdownにする。買った品は[x]で出す。 */
+export function shoppingListMarkdown(
+  items: ShoppingItem[],
+  heading = '買い物リスト',
+  checked: ReadonlySet<string> = new Set(),
+): string {
   const lines = [`# ${heading}`, ''];
   if (items.length === 0) {
     lines.push('品目はありません。', '');
     return lines.join('\n');
   }
   for (const item of items) {
-    lines.push(`- [ ] ${item.name} ${item.amount}`);
+    const mark = checked.has(item.name) ? 'x' : ' ';
+    lines.push(`- [${mark}] ${item.name} ${item.amount}`);
   }
   lines.push('');
   return lines.join('\n');
