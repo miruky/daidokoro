@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { buildShoppingList, countRemaining, shoppingListMarkdown } from './shopping';
+import {
+  buildShoppingList,
+  countRemaining,
+  partitionPantry,
+  shoppingListMarkdown,
+} from './shopping';
 import type { Recipe } from './recipes';
 
 function recipe(name: string, ingredients: Array<[string, string]>, servings = 2): Recipe {
@@ -97,6 +102,32 @@ describe('shoppingListMarkdown', () => {
       new Set(['玉ねぎ']),
     );
     expect(md).toBe('# 買い物リスト\n\n- [x] 玉ねぎ 3個\n- [ ] 塩 少々\n');
+  });
+});
+
+describe('partitionPantry', () => {
+  const items = [
+    { name: '玉ねぎ', amount: '3個', usedBy: ['A'] },
+    { name: '塩', amount: '少々', usedBy: ['A'] },
+    { name: '醤油', amount: '大さじ2', usedBy: ['A'] },
+  ];
+
+  it('常備品を買い物リストから分け、並び順を保つ', () => {
+    const { list, stocked } = partitionPantry(items, new Set(['塩', '醤油']));
+    expect(list.map((i) => i.name)).toEqual(['玉ねぎ']);
+    expect(stocked.map((i) => i.name)).toEqual(['塩', '醤油']);
+  });
+
+  it('常備品が無ければ全部リストに残る', () => {
+    const { list, stocked } = partitionPantry(items, new Set());
+    expect(list).toHaveLength(3);
+    expect(stocked).toHaveLength(0);
+  });
+
+  it('リストに無い常備品名は無視する', () => {
+    const { list, stocked } = partitionPantry(items, new Set(['にんにく']));
+    expect(list).toHaveLength(3);
+    expect(stocked).toHaveLength(0);
   });
 });
 
