@@ -15,10 +15,16 @@ import {
   type RecipeStore,
   type SortKey,
 } from './lib/recipes';
-import { buildShoppingList, shoppingListMarkdown, type ShoppingSelection } from './lib/shopping';
+import {
+  buildShoppingList,
+  countRemaining,
+  shoppingListMarkdown,
+  type ShoppingSelection,
+} from './lib/shopping';
 import { parseRoute, routeHash, type Route } from './lib/route';
 import { imageSrcset, imageVariant, isSafeImageUrl } from './lib/image';
 import { exportBackup, mergeRecipes, parseBackup } from './lib/backup';
+import { loadChecked, saveChecked } from './lib/checklist';
 import { icons } from './icons';
 
 const ESCAPES: Record<string, string> = {
@@ -94,6 +100,8 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
   let sortKey: SortKey = 'updated';
   /** 買い物かご。レシピid -> 作る人数 */
   const cart = new Map<string, number>();
+  /** 買い物リストで「買った」材料名。端末に保存して再訪でも残す */
+  const checked = loadChecked(localStorage);
   /** 詳細画面で換算中の人数。画面を離れるとレシピ本来の人数に戻る */
   let viewServings: number | null = null;
   /** 削除ボタンの二度押し確認。誤操作で消えないようにする */
@@ -363,6 +371,8 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
               ${icons.pencil}<span>編集</span></a>
             <button type="button" class="button" id="duplicate">
               ${icons.copy}<span>複製</span></button>
+            <button type="button" class="button" id="print-recipe">
+              ${icons.print}<span>印刷</span></button>
             <button type="button" class="button danger ${confirmingDelete ? 'confirming' : ''}"
               id="delete">${icons.trash}<span>${deleteLabel}</span></button>
           </div>
@@ -407,6 +417,7 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
       save();
       navigate({ view: 'edit', id: copy.id });
     });
+    root.querySelector('#print-recipe')?.addEventListener('click', () => window.print());
     root.querySelector('#delete')?.addEventListener('click', () => {
       if (!confirmingDelete) {
         confirmingDelete = true;
@@ -603,20 +614,26 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
       })
       .join('');
     const items = buildShoppingList(currentSelections());
+    const remaining = countRemaining(items, checked);
     const list =
       items.length === 0
         ? '<p class="empty">作るレシピを選ぶと、材料をまとめてここに出します。</p>'
         : `
           <table class="shopping"><tbody>
             ${items
-              .map(
-                (item, i) => `
-                  <tr style="--i:${i}">
-                    <th scope="row">${esc(item.name)}</th>
+              .map((item, i) => {
+                const got = checked.has(item.name);
+                return `
+                  <tr class="shop-row${got ? ' got' : ''}" style="--i:${i}">
+                    <td class="got-cell">
+                      <input type="checkbox" class="got-box" id="got-${i}" data-item="${esc(item.name)}"
+                        ${got ? 'checked' : ''} aria-label="${esc(item.name)}を買った" />
+                    </td>
+                    <th scope="row"><label for="got-${i}">${esc(item.name)}</label></th>
                     <td class="amount">${esc(item.amount)}</td>
                     <td class="used-by">${esc(item.usedBy.join('、'))}</td>
-                  </tr>`,
-              )
+                  </tr>`;
+              })
               .join('')}
           </tbody></table>
           <div class="list-actions">
@@ -626,7 +643,19 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
             <button type="button" class="button" id="download-md">
               ${icons.download}<span>Markdownを保存</span>
             </button>
+            <button type="button" class="button" id="print-list">
+              ${icons.print}<span>印刷</span>
+            </button>
+            ${
+              [...checked].some((name) => items.some((it) => it.name === name))
+                ? `<button type="button" class="link-button" id="clear-checks">買ったチェックを消す</button>`
+                : ''
+            }
           </div>`;
+    const tally =
+      items.length === 0
+        ? ''
+        : `<p class="shop-tally" role="status">残り ${remaining} 品 / 全 ${items.length} 品</p>`;
     return `
       <section class="view">
         <h1>買い物リスト</h1>
@@ -636,7 +665,10 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
           <ul class="picks">${picks}</ul>
         </section>
         <section class="panel">
-          <h2>必要な材料</h2>
+          <div class="panel-head">
+            <h2>必要な材料</h2>
+            ${tally}
+          </div>
           ${list}
         </section>
       </section>`;
@@ -663,8 +695,33 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
       root.querySelector(`[id="pick-${recipe.id}-dec"]`)?.addEventListener('click', change(-1));
       root.querySelector(`[id="pick-${recipe.id}-inc"]`)?.addEventListener('click', change(1));
     }
+    // 「買った」チェックは全描画せず、その行のクラスと残数だけ更新して保存する。
+    for (const box of root.querySelectorAll<HTMLInputElement>('input.got-box')) {
+      box.addEventListener('change', () => {
+        const name = box.dataset.item;
+        if (name === undefined) return;
+        if (box.checked) checked.add(name);
+        else checked.delete(name);
+        saveChecked(localStorage, checked);
+        box.closest('.shop-row')?.classList.toggle('got', box.checked);
+        const items = buildShoppingList(currentSelections());
+        const tally = root.querySelector('.shop-tally');
+        if (tally)
+          tally.textContent = `残り ${countRemaining(items, checked)} 品 / 全 ${items.length} 品`;
+      });
+    }
+    root.querySelector('#clear-checks')?.addEventListener('click', () => {
+      checked.clear();
+      saveChecked(localStorage, checked);
+      render();
+    });
+    root.querySelector('#print-list')?.addEventListener('click', () => window.print());
     root.querySelector('#copy-md')?.addEventListener('click', () => {
-      const markdown = shoppingListMarkdown(buildShoppingList(currentSelections()));
+      const markdown = shoppingListMarkdown(
+        buildShoppingList(currentSelections()),
+        '買い物リスト',
+        checked,
+      );
       void navigator.clipboard.writeText(markdown).then(() => {
         copied = true;
         render();
@@ -675,7 +732,11 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
       });
     });
     root.querySelector('#download-md')?.addEventListener('click', () => {
-      const markdown = shoppingListMarkdown(buildShoppingList(currentSelections()));
+      const markdown = shoppingListMarkdown(
+        buildShoppingList(currentSelections()),
+        '買い物リスト',
+        checked,
+      );
       const url = URL.createObjectURL(new Blob([markdown], { type: 'text/markdown' }));
       const a = document.createElement('a');
       a.href = url;

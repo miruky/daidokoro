@@ -1081,6 +1081,38 @@ svg {
   font-weight: 400;
 }
 
+/* 「買った」チェック。先頭にチェックボックス、済みは淡く打ち消し線。 */
+.shopping .got-cell {
+  width: 1.6rem;
+  padding-inline-start: 0;
+}
+
+.got-box {
+  width: 1.05rem;
+  height: 1.05rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.shopping th label {
+  cursor: pointer;
+}
+
+.shop-row.got th,
+.shop-row.got .amount,
+.shop-row.got .used-by {
+  color: var(--faint);
+  text-decoration: line-through;
+  text-decoration-color: var(--line-strong);
+}
+
+.shop-tally {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
 .shopping .amount {
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -1134,5 +1166,92 @@ svg {
   *::after {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+/* 印刷。台所で広げるレシピ・買い物リストを紙向きに整える。
+   サイト枠・操作系・写真を落とし、文字と表だけを黒地に残す。 */
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+    font-size: 12pt;
+    line-height: 1.6;
+  }
+
+  .site-header,
+  .site-footer,
+  .masthead,
+  .toolbar,
+  .data-bar,
+  .back,
+  .detail-actions,
+  .detail-hero,
+  .list-actions,
+  .add-cart,
+  #add-cart,
+  .stepper,
+  .got-cell {
+    display: none !important;
+  }
+
+  .site-main {
+    max-width: none;
+    padding: 0;
+  }
+
+  .panel {
+    border: 0;
+    padding: 0;
+    margin: 0 0 1.2rem;
+  }
+
+  h1 {
+    font-size: 20pt;
+    margin-bottom: 0.4rem;
+  }
+
+  h2 {
+    font-size: 14pt;
+    border-bottom: 1px solid #000;
+    padding-bottom: 2px;
+  }
+
+  .ingredients th,
+  .ingredients td,
+  .shopping th,
+  .shopping td {
+    border-bottom: 1px solid #bbb;
+    color: #000;
+  }
+
+  .shopping .amount,
+  .eyebrow,
+  .note {
+    color: #000;
+  }
+
+  /* 買い物リストは印刷でこそチェック欄が要る。空欄の四角を出す。 */
+  .shopping .got-cell {
+    display: table-cell !important;
+  }
+
+  .got-box {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 12pt;
+    height: 12pt;
+    border: 1px solid #000;
+  }
+
+  .shop-row.got th,
+  .shop-row.got .amount {
+    text-decoration: line-through;
+    color: #666;
+  }
+
+  a {
+    color: #000;
+    text-decoration: none;
   }
 }
