@@ -69,6 +69,26 @@ export function buildShoppingList(selections: ShoppingSelection[]): ShoppingItem
   });
 }
 
+export interface PartitionedList {
+  /** 買う必要のある品目 */
+  list: ShoppingItem[];
+  /** 常備品として除外した品目 */
+  stocked: ShoppingItem[];
+}
+
+/** 常備品に登録された材料を買い物リストから分離する。元の並び順は保つ。 */
+export function partitionPantry(
+  items: ShoppingItem[],
+  pantry: ReadonlySet<string>,
+): PartitionedList {
+  const list: ShoppingItem[] = [];
+  const stocked: ShoppingItem[] = [];
+  for (const item of items) {
+    (pantry.has(item.name) ? stocked : list).push(item);
+  }
+  return { list, stocked };
+}
+
 /** まだ買っていない品目の数。チェック済みは名前で判定する。 */
 export function countRemaining(items: ShoppingItem[], checked: ReadonlySet<string>): number {
   return items.reduce((n, item) => (checked.has(item.name) ? n : n + 1), 0);
