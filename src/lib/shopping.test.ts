@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildShoppingList, shoppingListMarkdown } from './shopping';
+import { buildShoppingList, countRemaining, shoppingListMarkdown } from './shopping';
 import type { Recipe } from './recipes';
 
 function recipe(name: string, ingredients: Array<[string, string]>, servings = 2): Recipe {
@@ -85,5 +85,34 @@ describe('shoppingListMarkdown', () => {
 
   it('空のときはその旨を書く', () => {
     expect(shoppingListMarkdown([])).toContain('品目はありません。');
+  });
+
+  it('チェック済みの品は[x]で出す', () => {
+    const md = shoppingListMarkdown(
+      [
+        { name: '玉ねぎ', amount: '3個', usedBy: ['肉じゃが'] },
+        { name: '塩', amount: '少々', usedBy: ['A'] },
+      ],
+      '買い物リスト',
+      new Set(['玉ねぎ']),
+    );
+    expect(md).toBe('# 買い物リスト\n\n- [x] 玉ねぎ 3個\n- [ ] 塩 少々\n');
+  });
+});
+
+describe('countRemaining', () => {
+  const items = [
+    { name: '玉ねぎ', amount: '3個', usedBy: ['A'] },
+    { name: '塩', amount: '少々', usedBy: ['A'] },
+    { name: '醤油', amount: '大さじ2', usedBy: ['A'] },
+  ];
+
+  it('チェック済みを除いた残り品目数を返す', () => {
+    expect(countRemaining(items, new Set())).toBe(3);
+    expect(countRemaining(items, new Set(['玉ねぎ', '醤油']))).toBe(1);
+  });
+
+  it('リストにない名前のチェックは数に影響しない', () => {
+    expect(countRemaining(items, new Set(['にんじん']))).toBe(3);
   });
 });
