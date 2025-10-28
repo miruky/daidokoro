@@ -18,13 +18,17 @@ import {
 import {
   buildShoppingList,
   countRemaining,
+  partitionPantry,
   shoppingListMarkdown,
+  type ShoppingItem,
   type ShoppingSelection,
 } from './lib/shopping';
 import { parseRoute, routeHash, type Route } from './lib/route';
 import { imageSrcset, imageVariant, isSafeImageUrl } from './lib/image';
 import { exportBackup, mergeRecipes, parseBackup } from './lib/backup';
 import { loadChecked, saveChecked } from './lib/checklist';
+import { loadPantry, savePantry } from './lib/pantry';
+import { isPrefixKey, resolveShortcut } from './lib/keyboard';
 import { icons } from './icons';
 
 const ESCAPES: Record<string, string> = {
@@ -102,6 +106,8 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
   const cart = new Map<string, number>();
   /** 買い物リストで「買った」材料名。端末に保存して再訪でも残す */
   const checked = loadChecked(localStorage);
+  /** 常備品(いつも家にある材料)。買い物リストから外す。端末に保存する */
+  const pantry = loadPantry(localStorage);
   /** 詳細画面で換算中の人数。画面を離れるとレシピ本来の人数に戻る */
   let viewServings: number | null = null;
   /** 削除ボタンの二度押し確認。誤操作で消えないようにする */
@@ -145,12 +151,49 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
       <header class="site-header">
         <div class="site-header-inner">
           <a class="brand" href="#/">${icons.logo}<span>daidokoro</span></a>
-          <nav aria-label="主要">
-            <a href="#/" ${onShopping ? '' : 'aria-current="page"'}>レシピ</a>
-            <a href="#/shopping" ${onShopping ? 'aria-current="page"' : ''}>買い物リスト${count}</a>
-          </nav>
+          <div class="header-nav">
+            <nav aria-label="主要">
+              <a href="#/" ${onShopping ? '' : 'aria-current="page"'}>レシピ</a>
+              <a href="#/shopping" ${onShopping ? 'aria-current="page"' : ''}>買い物リスト${count}</a>
+            </nav>
+            <button type="button" class="icon-button" id="help-open"
+              aria-label="キーボードショートカットを表示" title="ショートカット ( ? )">
+              ${icons.keyboard}
+            </button>
+          </div>
         </div>
       </header>`;
+  }
+
+  // キーボードショートカットの一覧。? で開き、Escやボタンで閉じる。
+  function helpDialog(): string {
+    const rows: Array<[string, string]> = [
+      ['/', '検索へ移動'],
+      ['n', '新しいレシピ'],
+      ['g → l', 'レシピ一覧へ'],
+      ['g → s', '買い物リストへ'],
+      ['?', 'このヘルプ'],
+    ];
+    const body = rows
+      .map(
+        ([keys, label]) => `
+          <div class="shortcut">
+            <dt>${keys
+              .split(' → ')
+              .map((k) => `<kbd>${esc(k)}</kbd>`)
+              .join('<span class="then">そのあと</span>')}</dt>
+            <dd>${esc(label)}</dd>
+          </div>`,
+      )
+      .join('');
+    return `
+      <dialog id="help-dialog" class="help-dialog" aria-labelledby="help-title">
+        <form method="dialog">
+          <h2 id="help-title">キーボードショートカット</h2>
+          <dl class="shortcut-list">${body}</dl>
+          <button type="submit" class="button" value="close">閉じる</button>
+        </form>
+      </dialog>`;
   }
 
   // 一覧の頭に置く全幅のヒーロー。仕込み中の俎板の写真にタイトルを重ねる。
@@ -590,6 +633,11 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
     return selections;
   }
 
+  /** 常備品を除いた、実際に買う品目。コピー・保存・残数の集計はこれを使う */
+  function shoppingItems(): ShoppingItem[] {
+    return partitionPantry(buildShoppingList(currentSelections()), pantry).list;
+  }
+
   function shoppingView(): string {
     if (recipes.length === 0) {
       return `
@@ -613,11 +661,18 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
           </li>`;
       })
       .join('');
-    const items = buildShoppingList(currentSelections());
+    const { list: items, stocked } = partitionPantry(
+      buildShoppingList(currentSelections()),
+      pantry,
+    );
     const remaining = countRemaining(items, checked);
     const list =
       items.length === 0
-        ? '<p class="empty">作るレシピを選ぶと、材料をまとめてここに出します。</p>'
+        ? `<p class="empty">${
+            stocked.length > 0
+              ? '必要な材料はすべて常備品でまかなえます。'
+              : '作るレシピを選ぶと、材料をまとめてここに出します。'
+          }</p>`
         : `
           <table class="shopping"><tbody>
             ${items
@@ -632,6 +687,12 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
                     <th scope="row"><label for="got-${i}">${esc(item.name)}</label></th>
                     <td class="amount">${esc(item.amount)}</td>
                     <td class="used-by">${esc(item.usedBy.join('、'))}</td>
+                    <td class="stock-cell">
+                      <button type="button" class="icon-button" data-pantry="${esc(item.name)}"
+                        aria-label="${esc(item.name)}を常備品にして買い物リストから外す" title="常備品にする">
+                        ${icons.jar}
+                      </button>
+                    </td>
                   </tr>`;
               })
               .join('')}
@@ -656,6 +717,29 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
       items.length === 0
         ? ''
         : `<p class="shop-tally" role="status">残り ${remaining} 品 / 全 ${items.length} 品</p>`;
+    const stockedSection =
+      stocked.length === 0
+        ? ''
+        : `
+          <section class="panel pantry">
+            <div class="panel-head">
+              <h2>常備品</h2>
+              <button type="button" class="link-button" id="clear-pantry">すべて戻す</button>
+            </div>
+            <p class="pantry-note">いつも家にある材料として買い物リストから外しています。</p>
+            <ul class="stocked">
+              ${stocked
+                .map(
+                  (item) => `
+                    <li>
+                      <span class="stock-name">${esc(item.name)}</span>
+                      <button type="button" class="link-button restore" data-restore="${esc(item.name)}"
+                        aria-label="${esc(item.name)}を買い物リストに戻す">戻す</button>
+                    </li>`,
+                )
+                .join('')}
+            </ul>
+          </section>`;
     return `
       <section class="view">
         <h1>買い物リスト</h1>
@@ -671,6 +755,7 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
           </div>
           ${list}
         </section>
+        ${stockedSection}
       </section>`;
   }
 
@@ -704,12 +789,36 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
         else checked.delete(name);
         saveChecked(localStorage, checked);
         box.closest('.shop-row')?.classList.toggle('got', box.checked);
-        const items = buildShoppingList(currentSelections());
+        const items = shoppingItems();
         const tally = root.querySelector('.shop-tally');
         if (tally)
           tally.textContent = `残り ${countRemaining(items, checked)} 品 / 全 ${items.length} 品`;
       });
     }
+    // 常備品にする(リストから外す)/ 戻す。集合を保存して全描画し直す。
+    for (const button of root.querySelectorAll<HTMLButtonElement>('button[data-pantry]')) {
+      button.addEventListener('click', () => {
+        const name = button.dataset.pantry;
+        if (name === undefined) return;
+        pantry.add(name);
+        savePantry(localStorage, pantry);
+        render();
+      });
+    }
+    for (const button of root.querySelectorAll<HTMLButtonElement>('button[data-restore]')) {
+      button.addEventListener('click', () => {
+        const name = button.dataset.restore;
+        if (name === undefined) return;
+        pantry.delete(name);
+        savePantry(localStorage, pantry);
+        render();
+      });
+    }
+    root.querySelector('#clear-pantry')?.addEventListener('click', () => {
+      pantry.clear();
+      savePantry(localStorage, pantry);
+      render();
+    });
     root.querySelector('#clear-checks')?.addEventListener('click', () => {
       checked.clear();
       saveChecked(localStorage, checked);
@@ -717,11 +826,7 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
     });
     root.querySelector('#print-list')?.addEventListener('click', () => window.print());
     root.querySelector('#copy-md')?.addEventListener('click', () => {
-      const markdown = shoppingListMarkdown(
-        buildShoppingList(currentSelections()),
-        '買い物リスト',
-        checked,
-      );
+      const markdown = shoppingListMarkdown(shoppingItems(), '買い物リスト', checked);
       void navigator.clipboard.writeText(markdown).then(() => {
         copied = true;
         render();
@@ -732,11 +837,7 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
       });
     });
     root.querySelector('#download-md')?.addEventListener('click', () => {
-      const markdown = shoppingListMarkdown(
-        buildShoppingList(currentSelections()),
-        '買い物リスト',
-        checked,
-      );
+      const markdown = shoppingListMarkdown(shoppingItems(), '買い物リスト', checked);
       const url = URL.createObjectURL(new Blob([markdown], { type: 'text/markdown' }));
       const a = document.createElement('a');
       a.href = url;
@@ -801,8 +902,10 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
       </div>
       <footer class="site-footer">
         <p>daidokoro — レシピと買い物リスト。データはこの端末のブラウザにだけ保存されます。</p>
-      </footer>`;
+      </footer>
+      ${helpDialog()}`;
     bind();
+    root.querySelector('#help-open')?.addEventListener('click', openHelp);
     // キャッシュ済みで onload が発火しない画像も、表示状態に揃える
     for (const img of root.querySelectorAll<HTMLImageElement>('img.ph')) {
       if (img.complete) img.classList.add('is-loaded');
@@ -825,6 +928,85 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
       }
     }
   }
+
+  function openHelp(): void {
+    const dialog = root.querySelector<HTMLDialogElement>('#help-dialog');
+    if (dialog && typeof dialog.showModal === 'function' && !dialog.open) dialog.showModal();
+  }
+
+  // 検索へ移動。一覧以外にいれば一覧へ遷移してから入力欄にフォーカスする。
+  function focusSearch(): void {
+    const input = root.querySelector<HTMLInputElement>('#search');
+    if (input) {
+      input.focus();
+      input.select();
+      return;
+    }
+    navigate({ view: 'list' });
+    window.setTimeout(() => {
+      const next = root.querySelector<HTMLInputElement>('#search');
+      next?.focus();
+    }, 0);
+  }
+
+  // ---- キーボードショートカット ----
+  // g に続けて押すキーを待つため、前置状態を短時間だけ保持する。
+  let pendingG = false;
+  let gTimer: ReturnType<typeof setTimeout> | null = null;
+  const clearPending = (): void => {
+    pendingG = false;
+    if (gTimer) {
+      clearTimeout(gTimer);
+      gTimer = null;
+    }
+  };
+  document.addEventListener('keydown', (e) => {
+    // ダイアログ表示中はネイティブのEsc閉じだけに任せ、他のキーは拾わない
+    if (root.querySelector('dialog[open]')) return;
+    const target = e.target;
+    const typing =
+      target instanceof HTMLElement &&
+      (target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.tagName === 'SELECT' ||
+        target.isContentEditable);
+
+    if (isPrefixKey(e.key, typing) && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      pendingG = true;
+      if (gTimer) clearTimeout(gTimer);
+      gTimer = setTimeout(clearPending, 1200);
+      return;
+    }
+
+    const shortcut = resolveShortcut({
+      key: e.key,
+      pendingG,
+      typing,
+      ctrl: e.ctrlKey,
+      meta: e.metaKey,
+      alt: e.altKey,
+    });
+    clearPending();
+    if (!shortcut) return;
+    e.preventDefault();
+    switch (shortcut.type) {
+      case 'focus-search':
+        focusSearch();
+        break;
+      case 'new-recipe':
+        navigate({ view: 'new' });
+        break;
+      case 'go-list':
+        navigate({ view: 'list' });
+        break;
+      case 'go-shopping':
+        navigate({ view: 'shopping' });
+        break;
+      case 'help':
+        openHelp();
+        break;
+    }
+  });
 
   // mastheadの軽い視差。スクロール量の一部だけ画像を遅らせて層をつくる。
   // reduced-motion では一切動かさない。rAFで間引いてスクロールを重くしない。
