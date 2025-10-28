@@ -1133,6 +1133,177 @@ svg {
   flex-wrap: wrap;
 }
 
+/* ---- アイコンボタン ---- */
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    color 0.18s var(--ease),
+    background-color 0.18s var(--ease);
+}
+
+.icon-button:hover {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+}
+
+.icon-button svg {
+  width: 19px;
+  height: 19px;
+}
+
+.header-nav {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+/* ---- 常備品 ---- */
+
+/* 買い物リストの各行末。常備品にして外す小さな操作 */
+.shopping .stock-cell {
+  width: 1.9rem;
+  text-align: right;
+  padding-inline-end: 0;
+}
+
+.shopping .stock-cell .icon-button {
+  width: 30px;
+  height: 30px;
+  color: var(--faint);
+}
+
+.shopping .stock-cell .icon-button svg {
+  width: 17px;
+  height: 17px;
+}
+
+.pantry-note {
+  margin: -6px 0 16px;
+  color: var(--faint);
+  font-size: var(--text-sm);
+}
+
+/* 常備品は罫線のチップで横に並べる。箱の羅列にしない */
+.stocked {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px 10px;
+}
+
+.stocked li {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 7px 5px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+}
+
+.stock-name {
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.stocked .restore {
+  font-size: 0.78rem;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.stocked .restore:hover:not(:disabled) {
+  background: var(--accent-soft);
+}
+
+/* ---- ショートカット案内ダイアログ ---- */
+
+/* * { margin: 0 } を置かないので、ダイアログは margin:auto で中央に出る */
+.help-dialog {
+  margin: auto;
+  width: calc(100% - 40px);
+  max-width: 22rem;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.help-dialog::backdrop {
+  background: color-mix(in srgb, #1a120b 42%, transparent);
+  backdrop-filter: blur(2px);
+}
+
+.help-dialog form {
+  padding: 26px 26px 22px;
+}
+
+.help-dialog h2 {
+  margin: 0 0 16px;
+  font-size: var(--text-lg);
+}
+
+.shortcut-list {
+  margin: 0 0 22px;
+}
+
+.shortcut {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 10px 0;
+  border-top: 1px solid var(--line);
+}
+
+.shortcut:first-child {
+  border-top: 0;
+}
+
+.shortcut dt {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.shortcut dd {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.shortcut .then {
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  color: var(--faint);
+}
+
+kbd {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  min-width: 1.6em;
+  padding: 2px 7px;
+  text-align: center;
+  border: 1px solid var(--line-strong);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--ink);
+}
+
 /* ---- 狭い画面 ---- */
 
 @media (max-width: 480px) {
@@ -1191,6 +1362,9 @@ svg {
   .add-cart,
   #add-cart,
   .stepper,
+  .stock-cell,
+  .pantry,
+  .help-dialog,
   .got-cell {
     display: none !important;
   }
