@@ -8,6 +8,7 @@ export function seedRecipes(now: number): Recipe[] {
       id: 'seed-nikujaga',
       name: '肉じゃが',
       servings: 2,
+      tags: ['和食', '煮物', '作り置き'],
       ingredients: [
         { name: 'じゃがいも', amount: '3個' },
         { name: '玉ねぎ', amount: '1個' },
@@ -34,6 +35,7 @@ export function seedRecipes(now: number): Recipe[] {
       id: 'seed-shogayaki',
       name: '豚の生姜焼き',
       servings: 2,
+      tags: ['和食', '豚肉', 'メイン'],
       ingredients: [
         { name: '豚ロース薄切り肉', amount: '300g' },
         { name: '玉ねぎ', amount: '1/2個' },
@@ -59,6 +61,7 @@ export function seedRecipes(now: number): Recipe[] {
       id: 'seed-misoshiru',
       name: '豆腐とわかめの味噌汁',
       servings: 2,
+      tags: ['和食', '汁物', '副菜'],
       ingredients: [
         { name: '豆腐', amount: '1/2丁' },
         { name: '乾燥わかめ', amount: '2g' },
