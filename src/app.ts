@@ -2,14 +2,18 @@
 // 変更のたびに現在のビューを丸ごと描き直す。フォーカスはidを頼りに復元する。
 
 import {
+  allTags,
   duplicateRecipe,
+  filterByTag,
   ingredientsToLines,
   MAX_SERVINGS,
   newRecipeId,
   parseIngredientLines,
   parseSteps,
+  parseTags,
   scaleIngredients,
   sortRecipes,
+  tagsToText,
   validateRecipe,
   type Recipe,
   type RecipeStore,
@@ -88,6 +92,7 @@ interface Draft {
   ingredients: string;
   steps: string;
   memo: string;
+  tags: string;
   image: string;
 }
 
@@ -102,6 +107,8 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
   let route = parseRoute(location.hash);
   let searchQuery = '';
   let sortKey: SortKey = 'updated';
+  /** 一覧の絞り込み中のタグ。null はすべて表示 */
+  let activeTag: string | null = null;
   /** 買い物かご。レシピid -> 作る人数 */
   const cart = new Map<string, number>();
   /** 買い物リストで「買った」材料名。端末に保存して再訪でも残す */
@@ -237,26 +244,29 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
 
   function filteredRecipes(): Recipe[] {
     const q = searchQuery.trim();
-    const hits =
+    let hits =
       q === ''
         ? recipes
         : recipes.filter(
             (r) => r.name.includes(q) || r.ingredients.some((i) => i.name.includes(q)),
           );
+    if (activeTag !== null) hits = filterByTag(hits, activeTag);
     return sortRecipes(hits, sortKey);
   }
 
   function listResults(): string {
     const hits = filteredRecipes();
     if (hits.length === 0) {
-      if (searchQuery.trim() === '') {
+      const q = searchQuery.trim();
+      if (q === '' && activeTag === null) {
         return `
           <div class="empty-state">
             ${icons.dish}
             <p>レシピがまだありません。上の「新しいレシピ」から書き留めるか、<br />書き出したファイルを下の「読み込む」から取り込めます。</p>
           </div>`;
       }
-      return `<p class="empty">「${esc(searchQuery.trim())}」に当てはまるレシピがありません。</p>`;
+      const terms = [activeTag, q].filter((t) => t !== null && t !== '').map((t) => `「${esc(t as string)}」`);
+      return `<p class="empty">${terms.join('と')}に当てはまるレシピがありません。</p>`;
     }
     const cards = hits
       .map((r, i) => {
@@ -278,6 +288,13 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
                 <h2><span>${esc(r.name)}</span></h2>
                 <p class="card-meta">${r.servings}人前・材料${r.ingredients.length}品</p>
                 <p class="card-preview">${esc(preview)}</p>
+                ${
+                  r.tags && r.tags.length > 0
+                    ? `<ul class="card-tags">${r.tags
+                        .map((t) => `<li class="tag">${esc(t)}</li>`)
+                        .join('')}</ul>`
+                    : ''
+                }
               </div>
             </a>
           </li>`;
@@ -286,7 +303,22 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
     return `<ul class="cards">${cards}</ul>`;
   }
 
+  // タグの絞り込み行。台帳にタグが無ければ何も出さない。
+  function tagFilter(): string {
+    const tags = allTags(recipes);
+    if (tags.length === 0) return '';
+    const chip = (tag: string | null, label: string, i: number): string => {
+      const active = activeTag === tag;
+      return `<button type="button" class="tag-chip${active ? ' active' : ''}" id="tag-${i}"
+        data-tag="${tag === null ? '' : esc(tag)}" aria-pressed="${active}">${esc(label)}</button>`;
+    };
+    const chips = [chip(null, 'すべて', 0), ...tags.map((t, i) => chip(t, t, i + 1))].join('');
+    return `<div class="tag-filter" role="group" aria-label="タグで絞り込み">${chips}</div>`;
+  }
+
   function listView(): string {
+    // 絞り込み中のタグが台帳から無くなっていたら解除する
+    if (activeTag !== null && !allTags(recipes).includes(activeTag)) activeTag = null;
     return `
       <section class="view">
         <div class="toolbar">
@@ -309,6 +341,7 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
           }
           <a class="button primary" href="#/new">${icons.plus}<span>新しいレシピ</span></a>
         </div>
+        ${tagFilter()}
         <div id="results">${listResults()}</div>
         <div class="data-bar">
           <button type="button" class="link-button" id="export" ${
@@ -337,6 +370,15 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
       sortKey = sort.value as SortKey;
       if (results) results.innerHTML = listResults();
     });
+
+    // タグ絞り込み。同じタグを再度押すと解除。チップの状態も変わるので全描画する。
+    for (const chip of root.querySelectorAll<HTMLButtonElement>('.tag-chip')) {
+      chip.addEventListener('click', () => {
+        const tag = chip.dataset.tag ?? '';
+        activeTag = tag === '' || activeTag === tag ? null : tag;
+        render();
+      });
+    }
 
     root.querySelector('#export')?.addEventListener('click', () => {
       const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -420,6 +462,17 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
               id="delete">${icons.trash}<span>${deleteLabel}</span></button>
           </div>
         </div>
+        ${
+          recipe.tags && recipe.tags.length > 0
+            ? `<div class="detail-tags">${recipe.tags
+                .map(
+                  (t) =>
+                    `<button type="button" class="tag tag-link" data-detail-tag="${esc(t)}"
+                      aria-label="${esc(t)}のレシピを一覧で見る">${esc(t)}</button>`,
+                )
+                .join('')}</div>`
+            : ''
+        }
         <section class="panel">
           <div class="panel-head">
             <h2>材料</h2>
@@ -440,6 +493,15 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
   }
 
   function bindDetailView(recipe: Recipe): void {
+    // タグを押すと、そのタグで絞り込んだ一覧へ移る
+    for (const tagButton of root.querySelectorAll<HTMLButtonElement>('button[data-detail-tag]')) {
+      tagButton.addEventListener('click', () => {
+        const tag = tagButton.dataset.detailTag;
+        if (tag === undefined) return;
+        activeTag = tag;
+        navigate({ view: 'list' });
+      });
+    }
     const setServings = (next: number): void => {
       viewServings = Math.min(MAX_SERVINGS, Math.max(1, next));
       render();
@@ -484,13 +546,14 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
 
   function draftFrom(recipe: Recipe | null): Draft {
     if (!recipe)
-      return { name: '', servings: '2', ingredients: '', steps: '', memo: '', image: '' };
+      return { name: '', servings: '2', ingredients: '', steps: '', memo: '', tags: '', image: '' };
     return {
       name: recipe.name,
       servings: String(recipe.servings),
       ingredients: ingredientsToLines(recipe.ingredients),
       steps: recipe.steps.join('\n'),
       memo: recipe.memo,
+      tags: tagsToText(recipe.tags),
       image: recipe.image ?? '',
     };
   }
@@ -533,6 +596,11 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
         <label class="field">
           <span>メモ(任意)</span>
           <textarea name="memo" rows="3">${esc(d.memo)}</textarea>
+        </label>
+        <label class="field">
+          <span>タグ(任意・カンマか空白区切り)</span>
+          <input name="tags" autocomplete="off"
+            placeholder="和食, 作り置き, メイン" value="${esc(d.tags)}" />
         </label>
         <label class="field">
           <span>写真URL(任意)</span>
@@ -588,10 +656,12 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
         ingredients: read('ingredients'),
         steps: read('steps'),
         memo: read('memo'),
+        tags: read('tags'),
         image: read('image'),
       };
       const servings = Number(draft.servings);
       const image = draft.image.trim();
+      const tags = parseTags(draft.tags);
       const candidate = {
         name: draft.name,
         servings,
@@ -611,6 +681,7 @@ export function createApp({ root, store, initialRecipes }: AppDeps): void {
         ingredients: candidate.ingredients,
         steps: parseSteps(draft.steps),
         memo: draft.memo.trim(),
+        ...(tags.length > 0 ? { tags } : {}),
         ...(image !== '' ? { image } : {}),
         updatedAt: Date.now(),
       };

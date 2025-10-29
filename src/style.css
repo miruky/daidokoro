@@ -1228,6 +1228,88 @@ svg {
   background: var(--accent-soft);
 }
 
+/* ---- タグ ---- */
+
+/* 表示用タグと絞り込みチップ。罫線の小さなピルで低彩度にそろえる */
+.tag,
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.74rem;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+  background: none;
+  white-space: nowrap;
+}
+
+.card-tags,
+.detail-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.card-tags {
+  margin-top: 11px;
+}
+
+/* タイトル直下に詰めて置く。detail-head の余白へ少し食い込ませる */
+.detail-tags {
+  margin: -22px 0 38px;
+}
+
+.tag-link {
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.78rem;
+  padding: 6px 13px;
+  transition:
+    color 0.18s var(--ease),
+    border-color 0.18s var(--ease),
+    background-color 0.18s var(--ease);
+}
+
+.tag-link:hover {
+  color: var(--accent-ink);
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* 一覧の絞り込み行 */
+.tag-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 2px 0 0;
+}
+
+.tag-chip {
+  cursor: pointer;
+  font-family: inherit;
+  transition:
+    color 0.18s var(--ease),
+    border-color 0.18s var(--ease),
+    background-color 0.18s var(--ease);
+}
+
+.tag-chip:hover {
+  color: var(--ink);
+  border-color: var(--faint);
+}
+
+.tag-chip.active {
+  background: var(--accent-btn);
+  border-color: var(--accent-btn);
+  color: #fff;
+}
+
 /* ---- ショートカット案内ダイアログ ---- */
 
 /* * { margin: 0 } を置かないので、ダイアログは margin:auto で中央に出る */
@@ -1365,6 +1447,8 @@ kbd {
   .stock-cell,
   .pantry,
   .help-dialog,
+  .tag-filter,
+  .detail-tags,
   .got-cell {
     display: none !important;
   }
