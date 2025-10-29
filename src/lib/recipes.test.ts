@@ -1,15 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
+  allTags,
   createStore,
   deserializeRecipes,
   duplicateRecipe,
+  filterByTag,
   ingredientsToLines,
   newRecipeId,
   parseIngredientLines,
   parseSteps,
+  parseTags,
   scaleIngredients,
   serializeRecipes,
   sortRecipes,
+  tagsToText,
   validateRecipe,
   type Recipe,
 } from './recipes';
@@ -69,6 +73,41 @@ describe('ingredientsToLines', () => {
 describe('parseSteps', () => {
   it('行ごとに手順を取り、行頭の番号は落とす', () => {
     expect(parseSteps('1. 切る\n2、煮る\n\n3) 盛る')).toEqual(['切る', '煮る', '盛る']);
+  });
+});
+
+describe('parseTags / tagsToText', () => {
+  it('読点・カンマ・空白で区切り、空と重複を取り除く', () => {
+    expect(parseTags('和食、作り置き  和食,メイン')).toEqual(['和食', '作り置き', 'メイン']);
+    expect(parseTags('，, 、 　')).toEqual([]);
+  });
+
+  it('タグ配列を入力欄の文字列へ戻す', () => {
+    expect(tagsToText(['和食', '汁物'])).toBe('和食, 汁物');
+    expect(tagsToText(undefined)).toBe('');
+  });
+});
+
+describe('allTags / filterByTag', () => {
+  const a = recipe({ id: 'a', tags: ['和食', '作り置き', 'メイン'] });
+  const b = recipe({ id: 'b', tags: ['和食', '作り置き'] });
+  const c = recipe({ id: 'c', tags: ['和食'] });
+  const d = recipe({ id: 'd' });
+
+  it('よく使う順に重複なく集める', () => {
+    expect(allTags([a, b, c, d])).toEqual(['和食', '作り置き', 'メイン']);
+  });
+
+  it('同数のタグはかな順で並べる', () => {
+    const x = recipe({ id: 'x', tags: ['そば'] });
+    const y = recipe({ id: 'y', tags: ['うどん'] });
+    expect(allTags([x, y])).toEqual(['うどん', 'そば']);
+  });
+
+  it('指定タグを持つレシピだけに絞る', () => {
+    expect(filterByTag([a, b, c, d], '和食').map((r) => r.id)).toEqual(['a', 'b', 'c']);
+    expect(filterByTag([a, b, c, d], 'メイン').map((r) => r.id)).toEqual(['a']);
+    expect(filterByTag([a, b, c, d], '無い')).toEqual([]);
   });
 });
 
@@ -133,6 +172,13 @@ describe('serialize / deserialize', () => {
   it('imageが文字列でない要素は読み飛ばす', () => {
     const bad = { ...recipe(), image: 123 };
     expect(deserializeRecipes(JSON.stringify([bad]))).toEqual([]);
+  });
+
+  it('タグつきは往復し、tagsが文字列配列でない要素は弾く', () => {
+    const tagged = recipe({ tags: ['和食', '作り置き'] });
+    expect(deserializeRecipes(serializeRecipes([tagged]))).toEqual([tagged]);
+    const badTags = { ...recipe(), tags: ['和食', 5] };
+    expect(deserializeRecipes(JSON.stringify([badTags]))).toEqual([]);
   });
 });
 

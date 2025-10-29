@@ -17,6 +17,8 @@ export interface Recipe {
   ingredients: Ingredient[];
   steps: string[];
   memo: string;
+  /** 分類タグ(任意)。「和食」「作り置き」など。一覧の絞り込みに使う */
+  tags?: string[];
   /** 料理写真のURL(任意)。http(s)のみ受け付ける */
   image?: string;
   updatedAt: number;
@@ -56,6 +58,37 @@ export function parseSteps(text: string): string[] {
     .split('\n')
     .map((line) => line.trim().replace(/^\d+[.、)]\s*/, ''))
     .filter((line) => line !== '');
+}
+
+/** タグ入力を解釈する。読点・カンマ・空白で区切り、空と重複を取り除く */
+export function parseTags(text: string): string[] {
+  const seen = new Set<string>();
+  for (const raw of text.split(/[,，、\s]+/)) {
+    const tag = raw.trim();
+    if (tag !== '') seen.add(tag);
+  }
+  return [...seen];
+}
+
+export function tagsToText(tags: string[] | undefined): string {
+  return (tags ?? []).join(', ');
+}
+
+/** 台帳に現れるタグを、よく使う順(同数はかな順)に重複なく集める */
+export function allTags(recipes: Recipe[]): string[] {
+  const counts = new Map<string, number>();
+  for (const r of recipes) {
+    for (const tag of r.tags ?? []) counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  }
+  return [...counts.keys()].sort((a, b) => {
+    const diff = (counts.get(b) ?? 0) - (counts.get(a) ?? 0);
+    return diff !== 0 ? diff : a.localeCompare(b, 'ja');
+  });
+}
+
+/** 指定タグを持つレシピだけに絞る */
+export function filterByTag(recipes: Recipe[], tag: string): Recipe[] {
+  return recipes.filter((r) => (r.tags ?? []).includes(tag));
 }
 
 /** 検証エラーを日本語で返す。空配列なら妥当 */
@@ -104,6 +137,7 @@ export function duplicateRecipe(recipe: Recipe, now: number = Date.now()): Recip
     name: `${recipe.name} (コピー)`,
     ingredients: recipe.ingredients.map((i) => ({ ...i })),
     steps: [...recipe.steps],
+    ...(recipe.tags ? { tags: [...recipe.tags] } : {}),
     updatedAt: now,
   };
 }
@@ -129,7 +163,9 @@ function isRecipe(value: unknown): value is Recipe {
     Array.isArray(r.steps) &&
     (r.steps as unknown[]).every((s) => typeof s === 'string') &&
     typeof r.memo === 'string' &&
-    // image は後から追加した任意項目。古い保存データには無いので未定義も許す
+    // tags・image は後から追加した任意項目。古い保存データには無いので未定義も許す
+    (r.tags === undefined ||
+      (Array.isArray(r.tags) && r.tags.every((t) => typeof t === 'string'))) &&
     (r.image === undefined || typeof r.image === 'string') &&
     typeof r.updatedAt === 'number'
   );
